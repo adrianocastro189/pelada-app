@@ -18,8 +18,8 @@ export class PostgresDrawAssignmentRepository implements DrawAssignmentRepositor
 
   async clearByPeladaId(peladaId: string): Promise<number> {
     const sql = 'DELETE FROM draw_assignments WHERE pelada_id = $1';
-    await this.sqlExecutor.query<{ id: string }>(sql, [peladaId]);
-    return 0; // Can't easily get rowCount from generic query
+    const result = await this.sqlExecutor.query<{ id: string }>(sql, [peladaId]);
+    return result.rows.length;
   }
 
   async findPlayerTeamInPelada(peladaId: string, playerId: string): Promise<DrawAssignmentRecord | null> {

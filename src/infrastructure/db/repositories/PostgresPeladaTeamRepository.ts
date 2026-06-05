@@ -18,14 +18,14 @@ export class PostgresPeladaTeamRepository implements PeladaTeamRepository {
 
   async delete(id: string): Promise<boolean> {
     const sql = 'DELETE FROM pelada_teams WHERE id = $1';
-    await this.sqlExecutor.query<{ id: string }>(sql, [id]);
-    return true;
+    const result = await this.sqlExecutor.query<{ id: string }>(sql, [id]);
+    return result.rows.length > 0;
   }
 
   async deleteAllByPeladaId(peladaId: string): Promise<number> {
     const sql = 'DELETE FROM pelada_teams WHERE pelada_id = $1';
-    await this.sqlExecutor.query<{ id: string }>(sql, [peladaId]);
-    return 0;
+    const result = await this.sqlExecutor.query<{ id: string }>(sql, [peladaId]);
+    return result.rows.length;
   }
 
   async findById(id: string): Promise<PeladaTeamRecord | null> {

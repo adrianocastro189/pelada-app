@@ -35,8 +35,8 @@ export class PostgresSubcaixinhaRepository implements SubcaixinhaRepository {
 
   async delete(id: string): Promise<boolean> {
     const sql = 'DELETE FROM subcaixinhas WHERE id = $1 AND current_value = 0';
-    await this.sqlExecutor.query<{ id: string }>(sql, [id]);
-    return true;
+    const result = await this.sqlExecutor.query<{ id: string }>(sql, [id]);
+    return result.rows.length > 0;
   }
 
   async findById(id: string): Promise<SubcaixinhaRecord | null> {

@@ -25,14 +25,23 @@ class MockSqlExecutor implements SqlExecutor {
       this.data.set(id, record);
       rows.push(record as T);
     }
-    // SELECT by id
-    else if (sql.includes('WHERE id = $1')) {
+    // DELETE
+    else if (sql.includes('DELETE FROM profiles')) {
+      const id = params?.[0] as string;
+      const existed = this.data.has(id);
+      if (existed) {
+        this.data.delete(id);
+        rows.push({ id } as T); // Return dummy record to indicate success
+      }
+    }
+    // SELECT by id (must come after DELETE to avoid matching DELETE WHERE)
+    else if (sql.includes('SELECT') && sql.includes('WHERE id = $1')) {
       const id = params?.[0] as string;
       const record = this.data.get(id);
       if (record) rows.push(record as T);
     }
     // SELECT all
-    else if (sql.includes('ORDER BY created_at DESC')) {
+    else if (sql.includes('SELECT') && sql.includes('ORDER BY created_at DESC')) {
       rows.push(...(Array.from(this.data.values()) as T[]));
     }
     // UPDATE
@@ -50,11 +59,6 @@ class MockSqlExecutor implements SqlExecutor {
         }
         rows.push(record as T);
       }
-    }
-    // DELETE
-    else if (sql.includes('DELETE FROM profiles')) {
-      const id = params?.[0] as string;
-      this.data.delete(id);
     }
 
     return { rows };
