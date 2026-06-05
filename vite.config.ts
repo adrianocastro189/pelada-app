@@ -9,14 +9,44 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      includeAssets: ['icon.svg'],
       manifest: {
         name: 'Pelada App',
-        short_name: 'Pelada App',
-        description: 'Manage your informal football group',
-        theme_color: '#1B6B3A',
-        background_color: '#ffffff',
+        short_name: 'Pelada',
+        description: 'Gerencie sua pelada: times, sorteio, caixinha.',
+        theme_color: '#1b6b3a',
+        background_color: '#1b6b3a',
         display: 'standalone',
-        start_url: '.',
+        orientation: 'portrait',
+        start_url: './',
+        id: './',
+        categories: ['sports', 'utilities'],
+        icons: [
+          {
+            src: 'icon.svg',
+            sizes: 'any',
+            type: 'image/svg+xml',
+            purpose: 'any',
+          },
+          {
+            src: 'icon.svg',
+            sizes: 'any',
+            type: 'image/svg+xml',
+            purpose: 'maskable',
+          },
+        ],
+      },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,svg,woff2}'],
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/.*\.neon\.tech\/.*/i,
+            handler: 'NetworkOnly',
+            options: {
+              cacheName: 'neon-db',
+            },
+          },
+        ],
       },
     }),
   ],
