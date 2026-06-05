@@ -86,7 +86,8 @@ describe('PostgresProfileRepository (Integration)', () => {
   });
 
   it('delete returns false if profile does not exist', async () => {
-    const result = await repo.delete('non-existent-id-12345');
+    const nonExistentId = '00000000-0000-0000-0000-000000000000';
+    const result = await repo.delete(nonExistentId);
     expect(result).toBe(false);
   });
 });
