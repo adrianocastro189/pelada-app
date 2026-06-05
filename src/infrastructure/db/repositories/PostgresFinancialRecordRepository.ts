@@ -23,7 +23,7 @@ export class PostgresFinancialRecordRepository implements FinancialRecordReposit
   }
 
   async delete(id: string): Promise<boolean> {
-    const sql = 'DELETE FROM financial_records WHERE id = $1';
+    const sql = 'DELETE FROM financial_records WHERE id = $1 RETURNING id';
     const result = await this.sqlExecutor.query<{ id: string }>(sql, [id]);
     return result.rows.length > 0;
   }

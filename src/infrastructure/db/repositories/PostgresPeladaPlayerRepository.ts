@@ -37,7 +37,7 @@ export class PostgresPeladaPlayerRepository implements PeladaPlayerRepository {
   }
 
   async removeFromRoster(peladaId: string, playerId: string): Promise<boolean> {
-    const sql = 'DELETE FROM pelada_players WHERE pelada_id = $1 AND player_id = $2';
+    const sql = 'DELETE FROM pelada_players WHERE pelada_id = $1 AND player_id = $2 RETURNING id';
     const result = await this.sqlExecutor.query<{ id: string }>(sql, [peladaId, playerId]);
     return result.rows.length > 0;
   }

@@ -144,7 +144,7 @@ describe('PostgresPeladaRepository (Integration)', () => {
 
   it('clone creates independent copy with new date', async () => {
     const original = await repo.create(profileId, {
-      date: new Date('2026-06-15'),
+      date: new Date(2026, 5, 15), // June 15
       time: '19:00',
       location: 'Campo do Bom',
       players_per_team: 11,
@@ -153,7 +153,7 @@ describe('PostgresPeladaRepository (Integration)', () => {
       goalkeeper_pays: true,
     });
 
-    const newDate = new Date('2026-06-22');
+    const newDate = new Date(2026, 5, 22); // June 22
     const cloned = await repo.clone(original.id, newDate);
 
     expect(cloned.id).not.toBe(original.id);
