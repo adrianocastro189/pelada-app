@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "test": "vitest run",
-    "test:integration": "echo 'Integration tests require Docker Postgres 16 — see ARCHITECTURE.md ADR-5'",
+    "test:integration": "vitest run --config vitest.config.integration.ts",
     "preview": "vite preview"
   },
   "dependencies": {
