@@ -1,3 +1,2 @@
-// Randomness adapters — SystemRandomSource (production), SeededRandomSource (tests).
-// Implement RandomSource from src/ports/RandomSource.ts.
-export {}
+export { SeededRandomSource } from './SeededRandomSource'
+export { SystemRandomSource } from './SystemRandomSource'

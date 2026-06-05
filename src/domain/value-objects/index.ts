@@ -1,3 +1,3 @@
-// Domain value objects — Money (integer cents), Stars, SlotType, Position, Speed, etc.
-// Populated as features are implemented (one micro-task at a time, TDD-first).
-export {}
+export { Money } from './Money'
+export { Stars } from './Stars'
+export type { FinancialRecordType, PlayerStatus, Position, SlotType, Speed } from './types'
