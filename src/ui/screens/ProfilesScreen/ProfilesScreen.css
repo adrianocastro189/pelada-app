@@ -1,0 +1,105 @@
+.profiles-screen {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: var(--color-background);
+  padding-bottom: calc(56px + var(--space-4) + env(safe-area-inset-bottom));
+}
+
+.profiles-header {
+  padding: var(--space-6) var(--space-4);
+  background-color: var(--color-primary-700);
+  color: var(--color-surface);
+  text-align: center;
+}
+
+.profiles-header h1 {
+  font-size: var(--font-h1);
+  margin-bottom: var(--space-2);
+}
+
+.profiles-header p {
+  font-size: var(--font-body);
+  opacity: 0.95;
+}
+
+.profiles-main {
+  flex: 1;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.profiles-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.profile-card {
+  cursor: pointer;
+}
+
+.profile-card-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.profile-card-name {
+  font-size: var(--font-h3);
+  color: var(--color-neutral-800);
+  flex: 1;
+  margin: 0;
+}
+
+.profile-card-delete {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  padding: var(--space-2);
+  transition: transform var(--transition-fast);
+}
+
+.profile-card-delete:hover {
+  transform: scale(1.2);
+}
+
+.profiles-loading,
+.profiles-empty {
+  text-align: center;
+  color: var(--color-neutral-600);
+  padding: var(--space-6);
+  font-size: var(--font-body);
+}
+
+.profiles-create-button {
+  margin-top: auto;
+}
+
+.profiles-create-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.profiles-delete-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.profiles-delete-confirm p {
+  color: var(--color-neutral-800);
+  font-size: var(--font-body);
+  margin: 0;
+}
+
+.profiles-delete-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
