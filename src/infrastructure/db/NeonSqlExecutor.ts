@@ -10,17 +10,12 @@ export class NeonSqlExecutor implements SqlExecutor {
   private readonly execute: ReturnType<typeof neon>
 
   constructor(connectionString: string) {
-    this.execute = neon(connectionString)
+    this.execute = neon(connectionString, { disableWarningInBrowsers: true })
   }
 
-  /**
-   * Executes a parameterized SQL query and returns typed rows.
-   * Params are spread as positional arguments to match the neon variadic signature.
-   */
   async query<T>(sql: string, params?: unknown[]): Promise<QueryResult<T>> {
-    // neon accepts (sql, ...params) — we spread the array to match its variadic form.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const rows = (await (this.execute as any)(sql, ...(params ?? []))) as T[]
+    // .query() returns rows directly (FullResults defaults to false)
+    const rows = await this.execute.query<T>(sql, params ?? []) as unknown as T[]
     return { rows }
   }
 }
