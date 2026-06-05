@@ -1,78 +1,70 @@
 import { useState } from 'react'
-import { SessionManager } from '@infrastructure/session/SessionManager'
+import { Button, Input } from '@ui/components'
+import './PasswordScreen.css'
 
 interface PasswordScreenProps {
-  /** Called with the connection string after the user submits a valid password. */
+  /** Called with the full connection string after the user submits. */
   onAuthenticated: (connectionString: string) => void
 }
 
+/**
+ * Entry screen — user types the full Neon connection string.
+ * No environment variables are read here: the host, user and db
+ * are all embedded in the connection string supplied at runtime.
+ */
 export function PasswordScreen({ onAuthenticated }: PasswordScreenProps): JSX.Element {
-  const [password, setPassword] = useState('')
+  const [connectionString, setConnectionString] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setError(null)
 
-    if (!password.trim()) {
-      setError('Digite a senha')
+    const trimmed = connectionString.trim()
+
+    if (!trimmed) {
+      setError('Digite a connection string')
       return
     }
 
-    try {
-      const connectionString = SessionManager.buildConnectionString(password)
-      onAuthenticated(connectionString)
-    } catch (err) {
-      if (err instanceof Error) {
-        setError(err.message)
-      } else {
-        setError('Erro ao processar a senha')
-      }
+    if (!trimmed.startsWith('postgresql://')) {
+      setError('Connection string inválida. Deve começar com postgresql://')
+      return
     }
+
+    onAuthenticated(trimmed)
   }
 
   return (
-    <main style={{ maxWidth: '400px', margin: '0 auto', padding: '2rem' }}>
-      <h1>Pelada App</h1>
-      <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: '1rem' }}>
-          <label htmlFor="password" style={{ display: 'block', marginBottom: '0.5rem' }}>
-            Senha do banco de dados:
-          </label>
-          <input
-            id="password"
+    <main className="password-screen">
+      <div className="password-screen__card">
+        <h1 className="password-screen__title">⚽ Pelada App</h1>
+        <p className="password-screen__subtitle">
+          Cole a connection string do Neon para entrar
+        </p>
+
+        <form onSubmit={handleSubmit} className="password-screen__form">
+          <Input
+            label="Connection string"
             type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '0.5rem',
-              boxSizing: 'border-box',
-            }}
+            value={connectionString}
+            onChange={e => setConnectionString(e.target.value)}
+            placeholder="postgresql://usuario:senha@host/banco"
+            error={error ?? undefined}
+            autoComplete="off"
+            autoCapitalize="none"
+            spellCheck={false}
           />
-        </div>
 
-        {error && (
-          <div style={{ color: 'red', marginBottom: '1rem' }}>
-            {error}
-          </div>
-        )}
+          <Button type="submit" variant="primary" fullWidth>
+            Entrar
+          </Button>
+        </form>
 
-        <button
-          type="submit"
-          style={{
-            width: '100%',
-            padding: '0.5rem',
-            backgroundColor: '#1B6B3A',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-          }}
-        >
-          Entrar
-        </button>
-      </form>
+        <p className="password-screen__hint">
+          Formato: <code>postgresql://usuario:senha@host/banco</code>
+        </p>
+      </div>
     </main>
   )
 }
