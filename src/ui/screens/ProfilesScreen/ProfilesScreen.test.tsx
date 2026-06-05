@@ -65,7 +65,7 @@ describe('ProfilesScreen', () => {
 
   it('opens create sheet when FAB clicked', async () => {
     render(<ProfilesScreen />);
-    const fab = screen.getByLabelText('Create new profile');
+    const fab = screen.getByLabelText('Criar novo perfil');
     await userEvent.click(fab);
     await waitFor(() => {
       expect(screen.getByPlaceholderText('Ex: Pelada Segunda')).toBeInTheDocument();
@@ -103,7 +103,7 @@ describe('ProfilesScreen', () => {
       expect(screen.getByText('Pelada Segunda')).toBeInTheDocument();
     });
 
-    const deleteButtons = screen.getAllByLabelText(/Delete/);
+    const deleteButtons = screen.getAllByLabelText(/Excluir/);
     expect(deleteButtons.length).toBeGreaterThan(0);
   });
 });

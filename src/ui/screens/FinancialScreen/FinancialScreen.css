@@ -1,0 +1,256 @@
+.financial-screen {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: var(--color-neutral-50);
+}
+
+.financial-header {
+  padding: var(--space-4) var(--space-4) var(--space-3);
+  background-color: var(--color-primary-700);
+  color: white;
+  text-align: center;
+}
+
+.financial-header h1 {
+  margin: 0;
+  font-size: var(--font-size-h2);
+  font-weight: 700;
+  font-family: var(--font-family-titles);
+}
+
+.financial-header p {
+  margin: var(--space-1) 0 0;
+  font-size: var(--font-size-label);
+  opacity: 0.9;
+}
+
+.financial-main {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-4);
+  padding-bottom: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* Balances */
+.balances-container {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-2);
+}
+
+.balance-card {
+  padding: var(--space-3);
+  border-radius: var(--border-radius-md);
+  text-align: center;
+}
+
+.balance-card.general {
+  background: linear-gradient(135deg, var(--color-primary-700), var(--color-primary-600));
+  color: white;
+}
+
+.balance-card.month {
+  background: linear-gradient(135deg, var(--color-accent-solar-700), var(--color-accent-solar-600));
+  color: white;
+}
+
+.balance-card.previous {
+  background-color: var(--color-neutral-200);
+  color: var(--color-neutral-800);
+}
+
+.balance-label {
+  margin: 0;
+  font-size: var(--font-size-label);
+  opacity: 0.9;
+  font-weight: 500;
+}
+
+.balance-value {
+  margin: var(--space-1) 0 0;
+  font-size: var(--font-size-h2);
+  font-weight: 700;
+  font-family: var(--font-family-titles);
+}
+
+/* Filters */
+.financial-filters {
+  padding: var(--space-3);
+  background-color: var(--color-neutral-100);
+  border-radius: var(--border-radius-md);
+}
+
+.filter-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.filter-label {
+  font-size: var(--font-size-label);
+  font-weight: 500;
+  color: var(--color-neutral-700);
+  margin-bottom: var(--space-1);
+}
+
+.filter-select,
+.form-select,
+.form-number {
+  padding: var(--space-2);
+  border: 1px solid var(--color-neutral-300);
+  border-radius: var(--border-radius-sm);
+  font-size: var(--font-size-body);
+  font-family: inherit;
+  background-color: white;
+  color: var(--color-neutral-800);
+  box-sizing: border-box;
+}
+
+.filter-select:focus,
+.form-select:focus,
+.form-number:focus {
+  outline: none;
+  border-color: var(--color-primary-700);
+  box-shadow: 0 0 0 3px var(--color-primary-100);
+}
+
+/* Records List */
+.financial-loading,
+.financial-empty {
+  text-align: center;
+  color: var(--color-neutral-500);
+  font-size: var(--font-size-body);
+  padding: var(--space-8) var(--space-4);
+}
+
+.records-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.record-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.record-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-3);
+}
+
+.record-info {
+  flex: 1;
+}
+
+.record-description {
+  margin: 0;
+  font-size: var(--font-size-body);
+  font-weight: 600;
+  color: var(--color-neutral-800);
+}
+
+.record-date {
+  margin: var(--space-1) 0 0;
+  font-size: var(--font-size-label);
+  color: var(--color-neutral-600);
+}
+
+.record-amount-delete {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 0 0 auto;
+}
+
+.record-amount {
+  font-weight: 700;
+  font-size: var(--font-size-body);
+  text-align: right;
+  min-width: 100px;
+}
+
+.record-amount.credit {
+  color: var(--color-success-700);
+}
+
+.record-amount.debit {
+  color: var(--color-danger-700);
+}
+
+.record-delete {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.2rem;
+  padding: 0;
+  transition: transform var(--transition-fast);
+}
+
+.record-delete:active {
+  transform: scale(1.1);
+}
+
+/* Form */
+.financial-create-button {
+  margin-top: var(--space-3);
+}
+
+.financial-create-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-2) 0;
+}
+
+.financial-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+.financial-form-row > div {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-label {
+  font-size: var(--font-size-label);
+  font-weight: 500;
+  color: var(--color-neutral-700);
+  margin-bottom: var(--space-1);
+}
+
+/* Delete Confirmation */
+.financial-delete-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-2) 0;
+}
+
+.financial-delete-confirm p {
+  margin: 0;
+  color: var(--color-neutral-700);
+  font-size: var(--font-size-body);
+  line-height: 1.5;
+}
+
+.financial-delete-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}

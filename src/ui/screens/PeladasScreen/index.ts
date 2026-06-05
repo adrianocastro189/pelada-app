@@ -1,0 +1,1 @@
+export { PeladasScreen } from './PeladasScreen'
