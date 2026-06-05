@@ -1,0 +1,90 @@
+@import './tokens.css';
+
+/**
+ * Global reset and base styles
+ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  font-family: var(--font-body-family);
+  font-size: var(--font-body);
+  font-weight: var(--font-body-weight);
+  background-color: var(--color-background);
+  color: var(--color-neutral-800);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+body {
+  max-width: 480px;
+  margin: 0 auto;
+  /* Safe area top padding for notch phones */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Typography defaults */
+h1 {
+  font-size: var(--font-h1);
+  font-weight: var(--font-h1-weight);
+  font-family: var(--font-h1-family);
+  line-height: var(--font-h1-line-height);
+}
+
+h2 {
+  font-size: var(--font-h2);
+  font-weight: var(--font-h2-weight);
+  font-family: var(--font-h2-family);
+  line-height: var(--font-h2-line-height);
+}
+
+h3 {
+  font-size: var(--font-h3);
+  font-weight: var(--font-h3-weight);
+  font-family: var(--font-h3-family);
+  line-height: var(--font-h3-line-height);
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  border: none;
+  cursor: pointer;
+}
+
+input,
+textarea,
+select {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+textarea {
+  resize: vertical;
+}
+
+/* Remove default list styles */
+ul,
+ol {
+  list-style: none;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Focus visible for accessibility */
+*:focus-visible {
+  outline: 2px solid var(--color-primary-700);
+  outline-offset: 2px;
+}
