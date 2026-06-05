@@ -31,7 +31,7 @@ export default function App(): JSX.Element {
   const navigateToTab = (tab: 'peladas' | 'players' | 'financial' | 'config') => {
     if (screen.name === 'profiles') return; // No profile selected yet
     const profileId = (screen as { profileId: string }).profileId;
-    setScreen(({ name: tab, profileId } as unknown) as Screen);
+    setScreen({ name: tab, profileId } as Screen);
   };
 
   const activeTab = (): 'peladas' | 'players' | 'financial' | 'config' | null => {
