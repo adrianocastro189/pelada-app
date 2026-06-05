@@ -30,14 +30,14 @@ describe('PostgresPeladaTeamRepository (Integration)', () => {
 
     // Create test profile
     profileId = uuid();
-    const profileResult = await executor.query(
+    await executor.query(
       'INSERT INTO profiles (id, name, convocation_template, created_at) VALUES ($1, $2, $3, NOW()) RETURNING id',
       [profileId, 'Test Profile', 'template']
     );
 
     // Create test pelada
     peladaId = uuid();
-    const peladaResult = await executor.query(
+    await executor.query(
       'INSERT INTO peladas (id, profile_id, date, players_per_team, max_goalkeepers, cost_per_player, goalkeeper_pays, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW()) RETURNING id',
       [peladaId, profileId, new Date('2026-06-15'), 11, 1, 5000, true]
     );

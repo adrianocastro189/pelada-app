@@ -31,21 +31,21 @@ describe('PostgresPeladaPlayerRepository (Integration)', () => {
 
     // Create test profile
     profileId = uuid();
-    const profileResult = await executor.query(
+    await executor.query(
       'INSERT INTO profiles (id, name, convocation_template, created_at) VALUES ($1, $2, $3, NOW()) RETURNING id',
       [profileId, 'Test Profile', 'template']
     );
 
     // Create test pelada
     peladaId = uuid();
-    const peladaResult = await executor.query(
+    await executor.query(
       'INSERT INTO peladas (id, profile_id, date, players_per_team, max_goalkeepers, cost_per_player, goalkeeper_pays, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW()) RETURNING id',
       [peladaId, profileId, new Date('2026-06-15'), 11, 1, 5000, true]
     );
 
     // Create test player
     playerId = uuid();
-    const playerResult = await executor.query(
+    await executor.query(
       'INSERT INTO players (id, profile_id, name, stars, position, speed, default_type, status, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW()) RETURNING id',
       [playerId, profileId, 'João', 3, 'line', 'medium', 'line', 'active']
     );
@@ -86,7 +86,7 @@ describe('PostgresPeladaPlayerRepository (Integration)', () => {
 
   it('listByPeladaId returns all roster entries for pelada', async () => {
     const playerId2 = uuid();
-    const player2Result = await executor.query(
+    await executor.query(
       'INSERT INTO players (id, profile_id, name, stars, position, speed, default_type, status, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW()) RETURNING id',
       [playerId2, profileId, 'Pedro', 2, 'goalkeeper', 'slow', 'goalkeeper', 'active']
     );
@@ -101,7 +101,7 @@ describe('PostgresPeladaPlayerRepository (Integration)', () => {
   });
 
   it('setPaid updates paid flag', async () => {
-    const entry = await repo.addToRoster(peladaId, playerId, 'line');
+    await repo.addToRoster(peladaId, playerId, 'line');
 
     const paid = await repo.setPaid(peladaId, playerId, true);
     expect(paid?.paid).toBe(true);

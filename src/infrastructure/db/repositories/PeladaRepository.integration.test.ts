@@ -29,7 +29,7 @@ describe('PostgresPeladaRepository (Integration)', () => {
 
     // Create test profile
     profileId = uuid();
-    const profileResult = await executor.query(
+    await executor.query(
       'INSERT INTO profiles (id, name, convocation_template, created_at) VALUES ($1, $2, $3, NOW()) RETURNING id',
       [profileId, 'Test Profile', 'template']
     );
@@ -115,10 +115,12 @@ describe('PostgresPeladaRepository (Integration)', () => {
     });
 
     // Compare date strings to avoid timezone issues
-    expect(new Date(updated!.date).toISOString().split('T')[0]).toBe('2026-06-20');
-    expect(updated?.players_per_team).toBe(7);
-    expect(updated?.time?.substring(0, 5)).toBe('19:00'); // unchanged, may include seconds
-    expect(updated?.location).toBe('Campo A'); // unchanged
+    if (updated) {
+      expect(new Date(updated.date).toISOString().split('T')[0]).toBe('2026-06-20');
+      expect(updated.players_per_team).toBe(7);
+      expect(updated.time?.substring(0, 5)).toBe('19:00'); // unchanged, may include seconds
+      expect(updated.location).toBe('Campo A'); // unchanged
+    }
   });
 
   it('delete removes pelada', async () => {

@@ -34,40 +34,40 @@ describe('PostgresDrawAssignmentRepository (Integration)', () => {
 
     // Create test profile
     profileId = uuid();
-    const profileResult = await executor.query(
+    await executor.query(
       'INSERT INTO profiles (id, name, convocation_template, created_at) VALUES ($1, $2, $3, NOW()) RETURNING id',
       [profileId, 'Test Profile', 'template']
     );
 
     // Create test pelada
     peladaId = uuid();
-    const peladaResult = await executor.query(
+    await executor.query(
       'INSERT INTO peladas (id, profile_id, date, players_per_team, max_goalkeepers, cost_per_player, goalkeeper_pays, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW()) RETURNING id',
       [peladaId, profileId, new Date('2026-06-15'), 11, 1, 5000, true]
     );
 
     // Create test teams
     teamId1 = uuid();
-    const team1Result = await executor.query(
+    await executor.query(
       'INSERT INTO pelada_teams (id, pelada_id, name, sort_order, created_at) VALUES ($1, $2, $3, $4, NOW()) RETURNING id',
       [teamId1, peladaId, 'Team A', 1]
     );
 
     teamId2 = uuid();
-    const team2Result = await executor.query(
+    await executor.query(
       'INSERT INTO pelada_teams (id, pelada_id, name, sort_order, created_at) VALUES ($1, $2, $3, $4, NOW()) RETURNING id',
       [teamId2, peladaId, 'Team B', 2]
     );
 
     // Create test players
     playerId1 = uuid();
-    const player1Result = await executor.query(
+    await executor.query(
       'INSERT INTO players (id, profile_id, name, stars, position, speed, default_type, status, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW()) RETURNING id',
       [playerId1, profileId, 'João', 3, 'line', 'medium', 'line', 'active']
     );
 
     playerId2 = uuid();
-    const player2Result = await executor.query(
+    await executor.query(
       'INSERT INTO players (id, profile_id, name, stars, position, speed, default_type, status, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW()) RETURNING id',
       [playerId2, profileId, 'Pedro', 2, 'goalkeeper', 'slow', 'goalkeeper', 'active']
     );

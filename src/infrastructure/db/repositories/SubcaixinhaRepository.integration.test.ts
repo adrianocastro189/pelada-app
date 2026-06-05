@@ -29,7 +29,7 @@ describe('PostgresSubcaixinhaRepository (Integration)', () => {
 
     // Create test profile
     profileId = uuid();
-    const profileResult = await executor.query(
+    await executor.query(
       'INSERT INTO profiles (id, name, convocation_template, created_at) VALUES ($1, $2, $3, NOW()) RETURNING id',
       [profileId, 'Test Profile', 'template']
     );
