@@ -1,0 +1,32 @@
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-full);
+  font-size: var(--font-label);
+  font-weight: 600;
+  background-color: var(--color-neutral-100);
+  color: var(--color-neutral-800);
+  border: 1px solid var(--color-neutral-200);
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.chip[role='button'] {
+  cursor: pointer;
+}
+
+.chip[role='button']:hover {
+  background-color: var(--color-neutral-200);
+}
+
+.chip--active {
+  background-color: var(--color-primary-700);
+  color: var(--color-surface);
+  border-color: var(--color-primary-700);
+}
+
+.chip--active:hover {
+  background-color: var(--color-primary-500);
+  border-color: var(--color-primary-500);
+}
