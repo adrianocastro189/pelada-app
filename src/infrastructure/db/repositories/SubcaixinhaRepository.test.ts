@@ -15,7 +15,7 @@ class MockSubcaixinhaSqlExecutor implements SqlExecutor {
       rows.push(record as T);
     } else if (sql.includes('UPDATE subcaixinhas SET current_value')) {
       const id = params?.[1] as string;
-      const record = this.data.get(id) as any;
+      const record = this.data.get(id) as unknown as { current_value: number };
       if (record) {
         record.current_value = (record.current_value ?? 0) + (params?.[0] as number);
         rows.push(record as T);

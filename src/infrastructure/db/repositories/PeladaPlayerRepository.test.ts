@@ -14,7 +14,6 @@ class MockPeladaPlayerSqlExecutor implements SqlExecutor {
       this.data.set(id, record);
       rows.push(record as T);
     } else if (sql.includes('DELETE')) {
-      const key = `${params?.[0]}-${params?.[1]}`;
       Array.from(this.data.entries()).forEach(([k, v]: [string, unknown]) => {
         if (JSON.stringify(v).includes(params?.[0] as string)) {
           this.data.delete(k);
