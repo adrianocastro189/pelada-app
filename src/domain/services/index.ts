@@ -1,3 +1,20 @@
-// Domain services — TeamDrawService, BalanceCalculator, SubcaixinhaBalancer, message builders.
-// Populated as features are implemented (one micro-task at a time, TDD-first).
-export {}
+export { AverageStarsStrategy, TotalStarsStrategy } from './BalancingStrategy'
+export type { BalancingStrategy } from './BalancingStrategy'
+export { BalanceCalculator } from './BalanceCalculator'
+export type { FinancialEntry } from './BalanceCalculator'
+export {
+  buildCashBoxMessage,
+  buildConvocationMessage,
+  buildDrawnTeamsMessage,
+  buildPaymentChecklistMessage,
+} from './MessageBuilders'
+export type {
+  CashBoxCommunicationData,
+  CashBoxEntry,
+  ConvocationData,
+  RosterPlayerForChecklist,
+  TeamForMessage,
+} from './MessageBuilders'
+export { SubcaixinhaBalancer } from './SubcaixinhaBalancer'
+export { TeamDrawService } from './TeamDrawService'
+export type { DrawConfig, DrawPlayer, TeamAssignment } from './TeamDrawService'
