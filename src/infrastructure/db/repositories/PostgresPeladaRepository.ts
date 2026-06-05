@@ -39,7 +39,7 @@ export class PostgresPeladaRepository implements PeladaRepository {
   }
 
   async delete(id: string): Promise<boolean> {
-    const sql = 'DELETE FROM peladas WHERE id = $1';
+    const sql = 'DELETE FROM peladas WHERE id = $1 RETURNING id';
     const result = await this.sqlExecutor.query<{ id: string }>(sql, [id]);
     return result.rows.length > 0;
   }
