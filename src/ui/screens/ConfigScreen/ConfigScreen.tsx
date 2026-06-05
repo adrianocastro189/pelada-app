@@ -6,13 +6,14 @@ import './ConfigScreen.css';
 
 interface ConfigScreenProps {
   profileId: string;
+  onSwitchProfile?: () => void;
 }
 
 /**
  * Screen for managing profile configuration.
  * Edit profile name and convocation template.
  */
-export function ConfigScreen({ profileId }: ConfigScreenProps): JSX.Element {
+export function ConfigScreen({ profileId, onSwitchProfile }: ConfigScreenProps): JSX.Element {
   const app = useApp();
   const [profile, setProfile] = useState<ProfileRecord | null>(null);
   const [loading, setLoading] = useState(true);
@@ -90,6 +91,17 @@ export function ConfigScreen({ profileId }: ConfigScreenProps): JSX.Element {
       </header>
 
       <main className="config-main">
+        {onSwitchProfile && (
+          <Button
+            variant="secondary"
+            fullWidth
+            onClick={onSwitchProfile}
+            className="config-switch-profile"
+          >
+            ↺ Trocar Perfil
+          </Button>
+        )}
+
         <section className="config-section">
           <h2 className="section-title">Perfil</h2>
           <div className="config-form">

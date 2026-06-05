@@ -86,12 +86,12 @@ describe('PeladaScreen', () => {
   });
 
   it('renders without crashing', () => {
-    const { container } = render(<PeladaScreen peladaId="p1" />);
+    const { container } = render(<PeladaScreen profileId="prof-1" peladaId="p1" />);
     expect(container).toBeInTheDocument();
   });
 
   it('calls loadPeladaData use cases on mount', async () => {
-    render(<PeladaScreen peladaId="p1" />);
+    render(<PeladaScreen profileId="prof-1" peladaId="p1" />);
     await waitFor(() => {
       expect(mockGetPelada).toHaveBeenCalledWith('p1');
       expect(mockGetRoster).toHaveBeenCalledWith('p1');
@@ -100,7 +100,7 @@ describe('PeladaScreen', () => {
   });
 
   it('loads player names from roster', async () => {
-    render(<PeladaScreen peladaId="p1" />);
+    render(<PeladaScreen profileId="prof-1" peladaId="p1" />);
     await waitFor(() => {
       expect(mockGetPlayer).toHaveBeenCalled();
     });
@@ -108,13 +108,13 @@ describe('PeladaScreen', () => {
 
   it('displays loading state initially', () => {
     mockGetPelada.mockImplementationOnce(() => new Promise(() => {})); // Never resolves
-    render(<PeladaScreen peladaId="p1" />);
+    render(<PeladaScreen profileId="prof-1" peladaId="p1" />);
     expect(screen.getByText('Carregando...')).toBeInTheDocument();
   });
 
   it('displays not found when pelada is null', async () => {
     mockGetPelada.mockResolvedValueOnce(null);
-    render(<PeladaScreen peladaId="p1" />);
+    render(<PeladaScreen profileId="prof-1" peladaId="p1" />);
     await waitFor(() => {
       expect(screen.getByText('Pelada não encontrada')).toBeInTheDocument();
     });

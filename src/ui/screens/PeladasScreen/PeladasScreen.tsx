@@ -6,13 +6,14 @@ import './PeladasScreen.css';
 
 interface PeladasScreenProps {
   profileId: string;
+  onSelectPelada?: (peladaId: string) => void;
 }
 
 /**
  * Screen for listing and managing peladas (matches) in a profile.
  * Lists all peladas and allows creation/deletion.
  */
-export function PeladasScreen({ profileId }: PeladasScreenProps): JSX.Element {
+export function PeladasScreen({ profileId, onSelectPelada }: PeladasScreenProps): JSX.Element {
   const app = useApp();
   const [peladas, setPeladas] = useState<PeladaRecord[]>([]);
   const [loading, setLoading] = useState(false);
@@ -85,8 +86,7 @@ export function PeladasScreen({ profileId }: PeladasScreenProps): JSX.Element {
   };
 
   const handleSelectPelada = (peladaId: string) => {
-    // TODO: Navigate to pelada details screen
-    console.log('Selected pelada:', peladaId);
+    onSelectPelada?.(peladaId);
   };
 
   const formatDate = (date: Date): string => {

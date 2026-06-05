@@ -1,0 +1,11 @@
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: var(--color-neutral-50);
+}
+
+/* Padding for screens that have BottomNav */
+.app > div {
+  padding-bottom: 70px;
+}
