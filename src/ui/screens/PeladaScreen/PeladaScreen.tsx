@@ -237,7 +237,7 @@ export function PeladaScreen({ peladaId }: PeladaScreenProps): JSX.Element {
                         onChange={e =>
                           handleSetPlayerPaid(entry.id, entry.player_id, e.target.checked)
                         }
-                        aria-label={`Mark ${players.get(entry.player_id)?.name} as paid`}
+                        aria-label={`Marcar ${players.get(entry.player_id)?.name} como pago`}
                       />
                       <span className="payment-status">{entry.paid ? '✅' : '❌'}</span>
                     </label>

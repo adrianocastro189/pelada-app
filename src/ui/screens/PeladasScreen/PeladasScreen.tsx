@@ -136,7 +136,7 @@ export function PeladasScreen({ profileId }: PeladasScreenProps): JSX.Element {
                       e.stopPropagation();
                       setConfirmDeleteId(pelada.id);
                     }}
-                    aria-label={`Delete pelada on ${formatDate(pelada.date)}`}
+                    aria-label={`Excluir pelada de ${formatDate(pelada.date)}`}
                   >
                     🗑️
                   </button>
@@ -158,7 +158,7 @@ export function PeladasScreen({ profileId }: PeladasScreenProps): JSX.Element {
 
       <FAB
         onClick={() => setShowCreateSheet(true)}
-        label="Create new match"
+        label="Criar nova pelada"
         icon="+"
       />
 

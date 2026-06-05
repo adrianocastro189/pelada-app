@@ -135,7 +135,7 @@ describe('FinancialScreen', () => {
   it('displays delete button for each record', async () => {
     render(<FinancialScreen profileId="prof-1" />);
     await waitFor(() => {
-      const deleteButtons = screen.getAllByLabelText(/Delete/);
+      const deleteButtons = screen.getAllByLabelText(/Excluir/);
       expect(deleteButtons.length).toBeGreaterThan(0);
     });
   });
@@ -145,7 +145,7 @@ describe('FinancialScreen', () => {
     await waitFor(() => {
       expect(screen.getByText('Venda de uniforme')).toBeInTheDocument();
     });
-    const deleteButtons = screen.getAllByLabelText(/Delete/);
+    const deleteButtons = screen.getAllByLabelText(/Excluir/);
     await userEvent.click(deleteButtons[0]);
     await waitFor(() => {
       expect(screen.getByText('Excluir Registro?')).toBeInTheDocument();
@@ -157,7 +157,7 @@ describe('FinancialScreen', () => {
     await waitFor(() => {
       expect(screen.getByText('Venda de uniforme')).toBeInTheDocument();
     });
-    const deleteButtons = screen.getAllByLabelText(/Delete/);
+    const deleteButtons = screen.getAllByLabelText(/Excluir/);
     await userEvent.click(deleteButtons[0]);
     const confirmButton = screen.getByRole('button', { name: 'Excluir' });
     await userEvent.click(confirmButton);

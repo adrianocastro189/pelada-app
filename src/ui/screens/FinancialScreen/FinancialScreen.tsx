@@ -185,7 +185,7 @@ export function FinancialScreen({ profileId }: FinancialScreenProps): JSX.Elemen
                     <button
                       className="record-delete"
                       onClick={() => setConfirmDeleteId(record.id)}
-                      aria-label={`Delete ${record.description}`}
+                      aria-label={`Excluir ${record.description}`}
                     >
                       🗑️
                     </button>

@@ -89,7 +89,7 @@ export function ProfilesScreen(): JSX.Element {
                       e.stopPropagation();
                       setConfirmDeleteId(profile.id);
                     }}
-                    aria-label={`Delete ${profile.name}`}
+                    aria-label={`Excluir ${profile.name}`}
                   >
                     🗑️
                   </button>
@@ -111,7 +111,7 @@ export function ProfilesScreen(): JSX.Element {
 
       <FAB
         onClick={() => setShowCreateSheet(true)}
-        label="Create new profile"
+        label="Criar novo perfil"
         icon="+"
       />
 

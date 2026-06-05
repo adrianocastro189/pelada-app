@@ -87,7 +87,7 @@ describe('PeladasScreen', () => {
 
   it('opens create sheet when FAB clicked', async () => {
     render(<PeladasScreen profileId="prof-1" />);
-    const fab = screen.getByLabelText('Create new match');
+    const fab = screen.getByLabelText('Criar nova pelada');
     await userEvent.click(fab);
     await waitFor(() => {
       expect(screen.getByText('Nova pelada')).toBeInTheDocument();
@@ -112,7 +112,7 @@ describe('PeladasScreen', () => {
       expect(screen.queryByText('Carregando...')).not.toBeInTheDocument();
     });
 
-    const fab = screen.getByLabelText('Create new match');
+    const fab = screen.getByLabelText('Criar nova pelada');
     await userEvent.click(fab);
 
     const timeInput = screen.getByLabelText('Hora (opcional)');
@@ -131,7 +131,7 @@ describe('PeladasScreen', () => {
     await waitFor(() => {
       expect(screen.queryByText('Carregando...')).not.toBeInTheDocument();
     });
-    const deleteButtons = screen.getAllByLabelText(/Delete pelada/);
+    const deleteButtons = screen.getAllByLabelText(/Excluir pelada/);
     expect(deleteButtons.length).toBe(2);
   });
 
@@ -140,7 +140,7 @@ describe('PeladasScreen', () => {
     await waitFor(() => {
       expect(screen.queryByText('Carregando...')).not.toBeInTheDocument();
     });
-    const deleteButtons = screen.getAllByLabelText(/Delete pelada/);
+    const deleteButtons = screen.getAllByLabelText(/Excluir pelada/);
     await userEvent.click(deleteButtons[0]);
     await waitFor(() => {
       expect(screen.getByText('Apagar pelada?')).toBeInTheDocument();
@@ -153,7 +153,7 @@ describe('PeladasScreen', () => {
       expect(screen.queryByText('Carregando...')).not.toBeInTheDocument();
     });
 
-    const deleteButtons = screen.getAllByLabelText(/Delete pelada/);
+    const deleteButtons = screen.getAllByLabelText(/Excluir pelada/);
     await userEvent.click(deleteButtons[0]);
 
     const confirmButton = screen.getByRole('button', { name: 'Apagar' });
