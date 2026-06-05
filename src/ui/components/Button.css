@@ -76,7 +76,8 @@
 }
 
 .button--destructive:hover:not(:disabled) {
-  background-color: #dc2626;
+  background-color: var(--color-danger);
+  filter: brightness(0.9);
 }
 
 /* Full width */

@@ -8,14 +8,16 @@ import type { PlayerRecord } from '@ports/repositories/PlayerRepository';
 import './PeladaScreen.css';
 
 interface PeladaScreenProps {
+  profileId: string;
   peladaId: string;
+  onBack?: () => void;
 }
 
 /**
  * Screen for viewing and managing a single pelada (match).
  * Displays pelada info, roster, draw, and payments in accordions.
  */
-export function PeladaScreen({ peladaId }: PeladaScreenProps): JSX.Element {
+export function PeladaScreen({ peladaId, onBack }: PeladaScreenProps): JSX.Element {
   const app = useApp();
   const [pelada, setPelada] = useState<PeladaRecord | null>(null);
   const [roster, setRoster] = useState<PeladaPlayerRecord[]>([]);
@@ -111,6 +113,15 @@ export function PeladaScreen({ peladaId }: PeladaScreenProps): JSX.Element {
   return (
     <div className="pelada-screen">
       <header className="pelada-header">
+        {onBack && (
+          <button
+            className="pelada-back-button"
+            onClick={onBack}
+            aria-label="Voltar"
+          >
+            ← Voltar
+          </button>
+        )}
         <h1>⚽ {formatDate(pelada.date)}</h1>
         {pelada.time && <p className="pelada-time">🕐 {pelada.time}</p>}
         {pelada.location && <p className="pelada-location">📍 {pelada.location}</p>}

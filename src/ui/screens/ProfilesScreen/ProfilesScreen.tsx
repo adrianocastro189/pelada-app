@@ -4,11 +4,15 @@ import { useApp } from '@ui/AppContext';
 import type { ProfileRecord } from '@ports/repositories/ProfileRepository';
 import './ProfilesScreen.css';
 
+interface ProfilesScreenProps {
+  onSelectProfile?: (profileId: string) => void;
+}
+
 /**
  * Screen for selecting or creating a profile (pelada).
  * Lists all profiles and allows creation/deletion.
  */
-export function ProfilesScreen(): JSX.Element {
+export function ProfilesScreen({ onSelectProfile }: ProfilesScreenProps = {}): JSX.Element {
   const app = useApp();
   const [profiles, setProfiles] = useState<ProfileRecord[]>([]);
   const [loading, setLoading] = useState(false);
@@ -57,8 +61,7 @@ export function ProfilesScreen(): JSX.Element {
   };
 
   const handleSelectProfile = (profileId: string) => {
-    // TODO: Navigate to home/peladas screen for this profile
-    console.log('Selected profile:', profileId);
+    onSelectProfile?.(profileId);
   };
 
   return (
