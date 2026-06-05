@@ -35,6 +35,14 @@ jobs:
           node-version: 22
           cache: npm
 
+      - name: Debug files
+        run: |
+          pwd
+          ls -la
+          echo "package-lock.json:"
+          ls -l package-lock.json || true
+          head -20 package-lock.json || true
+
       - run: npm ci
 
       - name: Lint
