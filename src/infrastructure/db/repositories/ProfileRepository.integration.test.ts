@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { PostgresProfileRepository } from './PostgresProfileRepository';
 import { PgSqlExecutor } from '../PgSqlExecutor';
 import { MigrationRunner } from '../MigrationRunner';
+import { ALL_MIGRATIONS } from '../migrations';
 
 /**
  * Integration tests against Docker PostgreSQL.
@@ -20,7 +21,7 @@ describe('PostgresProfileRepository (Integration)', () => {
 
     // Run migrations
     const runner = new MigrationRunner(executor);
-    await runner.runAll();
+    await runner.migrate(ALL_MIGRATIONS);
 
     repo = new PostgresProfileRepository(executor);
   });
