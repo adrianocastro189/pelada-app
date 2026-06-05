@@ -85,11 +85,11 @@ describe('PostgresPeladaPlayerRepository (Integration)', () => {
   });
 
   it('listByPeladaId returns all roster entries for pelada', async () => {
+    const playerId2 = uuid();
     const player2Result = await executor.query(
       'INSERT INTO players (id, profile_id, name, stars, position, speed, default_type, status, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW()) RETURNING id',
-      ['player-2', profileId, 'Pedro', 2, 'goalkeeper', 'slow', 'goalkeeper', 'active']
+      [playerId2, profileId, 'Pedro', 2, 'goalkeeper', 'slow', 'goalkeeper', 'active']
     );
-    const playerId2 = player2Result.rows[0].id;
 
     const entry1 = await repo.addToRoster(peladaId, playerId, 'line');
     const entry2 = await repo.addToRoster(peladaId, playerId2, 'goalkeeper');

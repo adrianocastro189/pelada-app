@@ -55,7 +55,8 @@ describe('PostgresPeladaRepository (Integration)', () => {
     expect(result.profile_id).toBe(profileId);
     // Compare date strings to avoid timezone issues
     expect(new Date(result.date).toISOString().split('T')[0]).toBe('2026-06-15');
-    expect(result.time).toBe('19:00');
+    // Time might return with seconds: '19:00:00' so compare prefix
+    expect(result.time?.substring(0, 5)).toBe('19:00');
     expect(result.location).toBe('Campo do Bom');
     expect(result.players_per_team).toBe(11);
     expect(result.max_goalkeepers).toBe(1);
@@ -116,7 +117,7 @@ describe('PostgresPeladaRepository (Integration)', () => {
     // Compare date strings to avoid timezone issues
     expect(new Date(updated!.date).toISOString().split('T')[0]).toBe('2026-06-20');
     expect(updated?.players_per_team).toBe(7);
-    expect(updated?.time).toBe('19:00'); // unchanged
+    expect(updated?.time?.substring(0, 5)).toBe('19:00'); // unchanged, may include seconds
     expect(updated?.location).toBe('Campo A'); // unchanged
   });
 
@@ -156,8 +157,9 @@ describe('PostgresPeladaRepository (Integration)', () => {
     const cloned = await repo.clone(original.id, newDate);
 
     expect(cloned.id).not.toBe(original.id);
-    expect(cloned.date).toEqual(newDate);
-    expect(cloned.time).toBe(original.time);
+    // Compare date strings to avoid timezone issues
+    expect(new Date(cloned.date).toISOString().split('T')[0]).toBe('2026-06-22');
+    expect(cloned.time?.substring(0, 5)).toBe(original.time?.substring(0, 5));
     expect(cloned.location).toBe(original.location);
     expect(cloned.players_per_team).toBe(original.players_per_team);
   });
