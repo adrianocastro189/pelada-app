@@ -1,5 +1,6 @@
 import { PeladaRepository } from '@ports/repositories/PeladaRepository';
 import { PeladaPlayerRepository, PeladaPlayerRecord } from '@ports/repositories/PeladaPlayerRepository';
+import { PeladaTeamRepository } from '@ports/repositories/PeladaTeamRepository';
 
 /**
  * Adds a player to a pelada's roster.
@@ -7,7 +8,8 @@ import { PeladaPlayerRepository, PeladaPlayerRecord } from '@ports/repositories/
 export class AddToRosterUseCase {
   constructor(
     private readonly peladaRepo: PeladaRepository,
-    private readonly rosterRepo: PeladaPlayerRepository
+    private readonly rosterRepo: PeladaPlayerRepository,
+    private readonly teamRepo: PeladaTeamRepository
   ) {}
 
   async execute(
@@ -31,8 +33,11 @@ export class AddToRosterUseCase {
     const roster = await this.rosterRepo.listByPeladaId(peladaId);
 
     if (slotType === 'line') {
+      // Total line capacity is players_per_team across ALL teams.
+      const teams = await this.teamRepo.listByPeladaId(peladaId);
+      const lineCapacity = pelada.players_per_team * teams.length;
       const lineCount = roster.filter((e) => e.slot_type === 'line').length;
-      if (lineCount >= pelada.players_per_team) {
+      if (lineCount >= lineCapacity) {
         throw new Error('Line slots are full');
       }
     } else {

@@ -237,10 +237,10 @@ e é isso que determina a quantidade de times. O formulário só capturava "joga
 - Suíte: 368 passando; as **3 falhas restantes são todas em `NeonSqlExecutor.test.ts`** e já falhavam
   na árvore limpa (confirmado via `git stash`) — exatamente o pendente nº 2 abaixo.
 
-### Ponto de atenção aberto (não tratado aqui)
+### Ponto de atenção (resolvido na parte 4)
 
-`AddToRosterUseCase` limita a capacidade por `players_per_team` + `max_goalkeepers`, mas a spec define
-a capacidade total como **nº de times × jogadores por time**. Ajuste pendente, fora do escopo destes bugs.
+`AddToRosterUseCase` limitava a capacidade de linha por `players_per_team`, mas a spec define a
+capacidade total como **nº de times × jogadores por time**. Corrigido — ver parte 4.
 
 ---
 
@@ -309,6 +309,21 @@ COMMIT;
 
 - `tsc -b` limpo (exceto o erro pré-existente de `NeonSqlExecutor.ts`, pendente nº 2 abaixo).
 - Suíte: 372 passando; as mesmas 3 falhas pré-existentes em `NeonSqlExecutor.test.ts`.
+
+---
+
+## Sessão de capacidade do roster (2026-06-05, parte 4)
+
+**Bug:** numa pelada com 3 times e 5 jogadores por time, a edição do roster limitava a 5 jogadores
+de linha (+ goleiros por `max_goalkeepers`), quando deveria permitir **15 de linha (5 × 3 times)**.
+
+**Causa:** `AddToRosterUseCase` usava `players_per_team` direto como capacidade de linha, ignorando o
+número de times.
+
+**Correção:** `src/application/use-cases/roster/AddToRosterUseCase.ts` agora injeta o
+`PeladaTeamRepository` e calcula `lineCapacity = players_per_team × nº de times`. A capacidade de
+goleiros (`max_goalkeepers`) permanece. `src/composition-root.ts` passa o `peladaTeamRepo`.
+Teste de regressão cobrindo 15 vagas de linha com 3 times.
 
 ---
 
