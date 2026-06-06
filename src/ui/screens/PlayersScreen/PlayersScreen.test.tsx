@@ -102,12 +102,21 @@ describe('PlayersScreen', () => {
     });
   });
 
-  it('displays player names and nicknames', async () => {
+  it('displays players as "Name - Nickname" when nickname exists', async () => {
     render(<PlayersScreen profileId="prof-1" />);
     await waitFor(() => {
-      expect(screen.getByText('João Silva')).toBeInTheDocument();
-      expect(screen.getByText('Joãozinho')).toBeInTheDocument();
-      expect(screen.getByText('Maria Santos')).toBeInTheDocument();
+      // João has nickname → combined format
+      expect(screen.getByText('João Silva - Joãozinho')).toBeInTheDocument();
+      // Maria's nickname equals surname portion — still combined
+      expect(screen.getByText('Maria Santos - Maria')).toBeInTheDocument();
+    });
+  });
+
+  it('displays player without nickname using name only', async () => {
+    mockListPlayers.mockResolvedValueOnce([mockPlayers[2]]); // Pedro — no nickname
+    render(<PlayersScreen profileId="prof-1" />);
+    await waitFor(() => {
+      expect(screen.getByText('Pedro Costa')).toBeInTheDocument();
     });
   });
 
@@ -162,7 +171,7 @@ describe('PlayersScreen', () => {
 
   it('opens edit sheet pre-filled when edit button clicked', async () => {
     render(<PlayersScreen profileId="prof-1" />);
-    const editButton = await screen.findByRole('button', { name: 'Editar João Silva' });
+    const editButton = await screen.findByRole('button', { name: 'Editar João Silva - Joãozinho' });
     await userEvent.click(editButton);
     await waitFor(() => {
       expect(screen.getByText('Editar jogador')).toBeInTheDocument();
@@ -180,7 +189,7 @@ describe('PlayersScreen', () => {
       reactivatePlayer: { execute: mockReactivatePlayer },
     });
     render(<PlayersScreen profileId="prof-1" />);
-    const editButton = await screen.findByRole('button', { name: 'Editar João Silva' });
+    const editButton = await screen.findByRole('button', { name: 'Editar João Silva - Joãozinho' });
     await userEvent.click(editButton);
 
     const submitButton = screen.getByRole('button', { name: 'Salvar' });
@@ -193,7 +202,7 @@ describe('PlayersScreen', () => {
 
   it('inactivates player from inside the edit sheet after confirmation', async () => {
     render(<PlayersScreen profileId="prof-1" />);
-    const editButton = await screen.findByRole('button', { name: 'Editar João Silva' });
+    const editButton = await screen.findByRole('button', { name: 'Editar João Silva - Joãozinho' });
     await userEvent.click(editButton);
 
     const inactivateButton = await screen.findByRole('button', { name: 'Inativar jogador' });

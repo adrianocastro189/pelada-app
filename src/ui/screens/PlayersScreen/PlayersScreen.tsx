@@ -4,6 +4,11 @@ import { useApp } from '@ui/AppContext';
 import type { PlayerRecord, PlayerPosition } from '@ports/repositories/PlayerRepository';
 import './PlayersScreen.css';
 
+/** Returns "Name - Nickname" when a nickname exists, otherwise just "Name". */
+function displayName(player: { name: string; nickname?: string | null }): string {
+  return player.nickname ? `${player.name} - ${player.nickname}` : player.name;
+}
+
 interface PlayersScreenProps {
   profileId: string;
 }
@@ -184,8 +189,7 @@ export function PlayersScreen({ profileId }: PlayersScreenProps): JSX.Element {
               <Card key={player.id} className="player-card">
                 <div className="player-card-header">
                   <div className="player-card-name">
-                    <h3>{player.name}</h3>
-                    {player.nickname && <p className="player-nickname">{player.nickname}</p>}
+                    <h3>{displayName(player)}</h3>
                   </div>
                   <div className="player-card-actions">
                     {player.status === 'inactive' && (
@@ -194,7 +198,7 @@ export function PlayersScreen({ profileId }: PlayersScreenProps): JSX.Element {
                     <button
                       className="player-edit-button"
                       onClick={() => openEditSheet(player)}
-                      aria-label={`Editar ${player.name}`}
+                      aria-label={`Editar ${displayName(player)}`}
                       title="Editar"
                     >
                       ✏️
@@ -335,7 +339,7 @@ export function PlayersScreen({ profileId }: PlayersScreenProps): JSX.Element {
 
           {editing && confirmInactivate && (
             <div className="players-inactivate-confirm">
-              <p>Inativar <strong>{editing.name}</strong>? O histórico é preservado e você pode reativá-lo depois.</p>
+              <p>Inativar <strong>{displayName(editing)}</strong>? O histórico é preservado e você pode reativá-lo depois.</p>
               <div className="players-inactivate-buttons">
                 <Button
                   variant="ghost"

@@ -17,6 +17,11 @@ import type { PlayerRecord } from '@ports/repositories/PlayerRepository';
 import type { ClonePeladaFormData } from '@ui/screens/PeladasScreen';
 import './PeladaScreen.css';
 
+/** Returns "Name - Nickname" when a nickname exists, otherwise just "Name". */
+function displayName(player: { name: string; nickname?: string | null }): string {
+  return player.nickname ? `${player.name} - ${player.nickname}` : player.name;
+}
+
 interface PeladaScreenProps {
   profileId: string;
   peladaId: string;
@@ -197,7 +202,7 @@ export function PeladaScreen({ profileId, peladaId, onBack, onClone }: PeladaScr
   const drawnTeamsForMessage: TeamForMessage[] = draw.map(result => ({
     name: result.team.name,
     players: result.players.map(assignment => ({
-      name: players.get(assignment.player_id)?.name || assignment.player_id,
+      name: displayName(players.get(assignment.player_id) ?? { name: assignment.player_id }),
       slotType: slotByPlayerId.get(assignment.player_id) ?? 'line',
     })),
   }));
@@ -209,7 +214,7 @@ export function PeladaScreen({ profileId, peladaId, onBack, onClone }: PeladaScr
     roster
       .filter(e => e.slot_type !== 'goalkeeper' || pelada.goalkeeper_pays)
       .map(e => ({
-        name: players.get(e.player_id)?.name || e.player_id,
+        name: displayName(players.get(e.player_id) ?? { name: e.player_id }),
         paid: e.paid,
       })),
   );
@@ -292,13 +297,13 @@ export function PeladaScreen({ profileId, peladaId, onBack, onClone }: PeladaScr
                 {roster.map(entry => (
                   <div key={entry.id} className="roster-item">
                     <span className="roster-player">
-                      {players.get(entry.player_id)?.name || entry.player_id}
+                      {displayName(players.get(entry.player_id) ?? { name: entry.player_id })}
                       {entry.slot_type === 'goalkeeper' && ' 🧤'}
                     </span>
                     <button
                       className="roster-remove"
                       onClick={() => handleRemoveFromRoster(entry.player_id)}
-                      aria-label={`Remover ${players.get(entry.player_id)?.name || entry.player_id} do roster`}
+                      aria-label={`Remover ${displayName(players.get(entry.player_id) ?? { name: entry.player_id })} do roster`}
                       title="Remover"
                     >
                       ✕
@@ -346,7 +351,7 @@ export function PeladaScreen({ profileId, peladaId, onBack, onClone }: PeladaScr
                       <ul className="draw-team-players">
                         {result.players.map(assignment => (
                           <li key={assignment.id}>
-                            {players.get(assignment.player_id)?.name || assignment.player_id}
+                            {displayName(players.get(assignment.player_id) ?? { name: assignment.player_id })}
                           </li>
                         ))}
                       </ul>
@@ -400,7 +405,7 @@ export function PeladaScreen({ profileId, peladaId, onBack, onClone }: PeladaScr
                     {paymentRoster.map(entry => (
                       <div key={entry.id} className="payment-row">
                         <span className="payment-name">
-                          {players.get(entry.player_id)?.name || entry.player_id}
+                          {displayName(players.get(entry.player_id) ?? { name: entry.player_id })}
                         </span>
                         <label className="payment-checkbox">
                           <input
@@ -465,7 +470,7 @@ export function PeladaScreen({ profileId, peladaId, onBack, onClone }: PeladaScr
                   onClick={() => handleAddToRoster(player)}
                 >
                   <span>
-                    {player.name}
+                    {displayName(player)}
                     {player.position === 'goalkeeper' && ' 🧤'}
                   </span>
                   <span className="roster-picker-add">+</span>

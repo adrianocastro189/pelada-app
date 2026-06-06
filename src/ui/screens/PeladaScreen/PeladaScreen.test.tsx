@@ -130,6 +130,50 @@ describe('PeladaScreen', () => {
     });
   });
 
+  describe('displayName format in roster', () => {
+    it('shows "Name - Nickname" when player has a distinct nickname', async () => {
+      // Override player data so nickname differs from name
+      mockGetPlayer.mockImplementation((playerId: string) => {
+        const overrides: Record<string, PlayerRecord> = {
+          pl1: { ...mockPlayers[0], nickname: 'Joãozinho' },
+          pl2: { ...mockPlayers[1], nickname: null },
+          pl3: { ...mockPlayers[2], nickname: null },
+        };
+        return Promise.resolve(overrides[playerId] ?? { id: playerId, name: 'Unknown', nickname: null });
+      });
+
+      render(<PeladaScreen profileId="prof-1" peladaId="p1" />);
+      await waitFor(() => {
+        expect(screen.queryByText('Carregando...')).not.toBeInTheDocument();
+      });
+
+      // Open roster accordion
+      await userEvent.click(screen.getByRole('button', { name: /Roster/i }));
+      // João is a line player — should show combined name without goalkeeper emoji
+      expect(screen.queryByText('João - Joãozinho 🧤')).not.toBeInTheDocument();
+      expect(await screen.findByText('João - Joãozinho')).toBeInTheDocument();
+    });
+
+    it('shows name only when player has no nickname', async () => {
+      mockGetPlayer.mockImplementation((playerId: string) => {
+        const overrides: Record<string, PlayerRecord> = {
+          pl3: { ...mockPlayers[2], nickname: null },
+        };
+        const base = mockPlayers.find(p => p.id === playerId);
+        return Promise.resolve(overrides[playerId] ?? base ?? { id: playerId, name: 'Unknown', nickname: null });
+      });
+
+      render(<PeladaScreen profileId="prof-1" peladaId="p1" />);
+      await waitFor(() => {
+        expect(screen.queryByText('Carregando...')).not.toBeInTheDocument();
+      });
+
+      await userEvent.click(screen.getByRole('button', { name: /Roster/i }));
+      expect(await screen.findByText('Pedro')).toBeInTheDocument();
+      expect(screen.queryByText(/Pedro -/)).not.toBeInTheDocument();
+    });
+  });
+
   describe('clone button', () => {
     it('renders clone button when onClone prop is provided', async () => {
       const onClone = vi.fn();
