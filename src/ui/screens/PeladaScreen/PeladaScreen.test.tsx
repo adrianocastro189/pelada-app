@@ -29,9 +29,9 @@ const mockPelada: PeladaRecord = {
 };
 
 const mockPlayers: PlayerRecord[] = [
-  { id: 'pl1', profile_id: 'prof-1', name: 'João', nickname: 'João', phone: '', stars: 2.5, position: 'line', speed: 'fast', default_type: 'line', invited_by_id: null, status: 'active', created_at: new Date() },
-  { id: 'pl2', profile_id: 'prof-1', name: 'Maria', nickname: 'Maria', phone: '', stars: 3, position: 'goalkeeper', speed: 'medium', default_type: 'goalkeeper', invited_by_id: null, status: 'active', created_at: new Date() },
-  { id: 'pl3', profile_id: 'prof-1', name: 'Pedro', nickname: 'Pedro', phone: '', stars: 2, position: 'line', speed: 'slow', default_type: 'line', invited_by_id: null, status: 'active', created_at: new Date() },
+  { id: 'pl1', profile_id: 'prof-1', name: 'João', nickname: 'João', phone: '', stars: 2.5, position: 'midfield', speed: 'fast', invited_by_id: null, status: 'active', created_at: new Date() },
+  { id: 'pl2', profile_id: 'prof-1', name: 'Maria', nickname: 'Maria', phone: '', stars: 3, position: 'goalkeeper', speed: 'medium', invited_by_id: null, status: 'active', created_at: new Date() },
+  { id: 'pl3', profile_id: 'prof-1', name: 'Pedro', nickname: 'Pedro', phone: '', stars: 2, position: 'midfield', speed: 'slow', invited_by_id: null, status: 'active', created_at: new Date() },
 ];
 
 const mockRoster: PeladaPlayerRecord[] = [
@@ -58,6 +58,7 @@ const mockDraw: DrawResult[] = [
 
 describe('PeladaScreen', () => {
   let mockGetPelada: ReturnType<typeof vi.fn>;
+  let mockGetProfile: ReturnType<typeof vi.fn>;
   let mockGetRoster: ReturnType<typeof vi.fn>;
   let mockGetDraw: ReturnType<typeof vi.fn>;
   let mockGetPlayer: ReturnType<typeof vi.fn>;
@@ -66,6 +67,12 @@ describe('PeladaScreen', () => {
 
   beforeEach(() => {
     mockGetPelada = vi.fn().mockResolvedValue(mockPelada);
+    mockGetProfile = vi.fn().mockResolvedValue({
+      id: 'prof-1',
+      name: 'Test',
+      convocation_template: '',
+      created_at: new Date(),
+    });
     mockGetRoster = vi.fn().mockResolvedValue(mockRoster);
     mockGetDraw = vi.fn().mockResolvedValue(mockDraw);
     mockGetPlayer = vi.fn().mockImplementation((playerId: string) => {
@@ -77,6 +84,7 @@ describe('PeladaScreen', () => {
 
     (AppContextModule.useApp as ReturnType<typeof vi.fn>).mockReturnValue({
       getPelada: { execute: mockGetPelada },
+      getProfile: { execute: mockGetProfile },
       getRoster: { execute: mockGetRoster },
       getDraw: { execute: mockGetDraw },
       getPlayer: { execute: mockGetPlayer },

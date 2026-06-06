@@ -19,10 +19,9 @@ class MockPlayerSqlExecutor implements SqlExecutor {
         nickname: params?.[2] as string | null,
         phone: params?.[3] as string | null,
         stars: params?.[4] as number,
-        position: params?.[5] as 'goalkeeper' | 'line',
+        position: params?.[5] as PlayerRecord['position'],
         speed: params?.[6] as 'slow' | 'medium' | 'fast',
-        default_type: params?.[7] as 'goalkeeper' | 'line',
-        invited_by_id: params?.[8] as string | null,
+        invited_by_id: params?.[7] as string | null,
         status: 'active',
         created_at: new Date(),
       };
@@ -75,9 +74,8 @@ describe('PostgresPlayerRepository', () => {
     const result = await repo.create('profile-1', {
       name: 'John',
       stars: 3.5,
-      position: 'line',
+      position: 'midfield',
       speed: 'medium',
-      default_type: 'line',
     });
     expect(result.id).toBeDefined();
     expect(result.name).toBe('John');
@@ -85,14 +83,14 @@ describe('PostgresPlayerRepository', () => {
   });
 
   it('listActiveByProfileId returns only active players', async () => {
-    await repo.create('profile-1', { name: 'Player 1', stars: 3, position: 'line', speed: 'medium', default_type: 'line' });
+    await repo.create('profile-1', { name: 'Player 1', stars: 3, position: 'midfield', speed: 'medium' });
     const result = await repo.listActiveByProfileId('profile-1');
     expect(result.length).toBeGreaterThan(0);
     expect(result.every((p) => p.status === 'active')).toBe(true);
   });
 
   it('inactivate sets player status to inactive', async () => {
-    const created = await repo.create('profile-1', { name: 'Test', stars: 3, position: 'line', speed: 'medium', default_type: 'line' });
+    const created = await repo.create('profile-1', { name: 'Test', stars: 3, position: 'midfield', speed: 'medium' });
     const result = await repo.inactivate(created.id);
     expect(result).toBe(true);
   });

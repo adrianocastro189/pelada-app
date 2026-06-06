@@ -23,9 +23,9 @@ export class PostgresPlayerRepository implements PlayerRepository {
 
   async create(profileId: string, player: CreatePlayerInput): Promise<PlayerRecord> {
     const sql = `
-      INSERT INTO players (profile_id, name, nickname, phone, stars, position, speed, default_type, invited_by_id, status)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'active')
-      RETURNING id, profile_id, name, nickname, phone, stars, position, speed, default_type, invited_by_id, status, created_at
+      INSERT INTO players (profile_id, name, nickname, phone, stars, position, speed, invited_by_id, status)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'active')
+      RETURNING id, profile_id, name, nickname, phone, stars, position, speed, invited_by_id, status, created_at
     `;
     const result = await this.sqlExecutor.query<PlayerRecord>(sql, [
       profileId,
@@ -35,7 +35,6 @@ export class PostgresPlayerRepository implements PlayerRepository {
       player.stars,
       player.position,
       player.speed,
-      player.default_type,
       player.invited_by_id ?? null,
     ]);
     const record = result.rows[0];
@@ -45,7 +44,7 @@ export class PostgresPlayerRepository implements PlayerRepository {
 
   async findById(id: string): Promise<PlayerRecord | null> {
     const sql = `
-      SELECT id, profile_id, name, nickname, phone, stars, position, speed, default_type, invited_by_id, status, created_at
+      SELECT id, profile_id, name, nickname, phone, stars, position, speed, invited_by_id, status, created_at
       FROM players WHERE id = $1
     `;
     const result = await this.sqlExecutor.query<PlayerRecord>(sql, [id]);
@@ -56,7 +55,7 @@ export class PostgresPlayerRepository implements PlayerRepository {
 
   async listActiveByProfileId(profileId: string): Promise<PlayerRecord[]> {
     const sql = `
-      SELECT id, profile_id, name, nickname, phone, stars, position, speed, default_type, invited_by_id, status, created_at
+      SELECT id, profile_id, name, nickname, phone, stars, position, speed, invited_by_id, status, created_at
       FROM players WHERE profile_id = $1 AND status = 'active' ORDER BY name ASC
     `;
     const result = await this.sqlExecutor.query<PlayerRecord>(sql, [profileId]);
@@ -65,7 +64,7 @@ export class PostgresPlayerRepository implements PlayerRepository {
 
   async listAllByProfileId(profileId: string): Promise<PlayerRecord[]> {
     const sql = `
-      SELECT id, profile_id, name, nickname, phone, stars, position, speed, default_type, invited_by_id, status, created_at
+      SELECT id, profile_id, name, nickname, phone, stars, position, speed, invited_by_id, status, created_at
       FROM players WHERE profile_id = $1 ORDER BY name ASC
     `;
     const result = await this.sqlExecutor.query<PlayerRecord>(sql, [profileId]);
@@ -86,7 +85,7 @@ export class PostgresPlayerRepository implements PlayerRepository {
 
   async searchByNameInProfile(profileId: string, query: string): Promise<PlayerRecord[]> {
     const sql = `
-      SELECT id, profile_id, name, nickname, phone, stars, position, speed, default_type, invited_by_id, status, created_at
+      SELECT id, profile_id, name, nickname, phone, stars, position, speed, invited_by_id, status, created_at
       FROM players WHERE profile_id = $1 AND status = 'active' AND name ILIKE $2
       ORDER BY name ASC
     `;
@@ -123,10 +122,6 @@ export class PostgresPlayerRepository implements PlayerRepository {
       updates.push(`speed = $${paramIndex++}`);
       values.push(data.speed);
     }
-    if (data.default_type !== undefined) {
-      updates.push(`default_type = $${paramIndex++}`);
-      values.push(data.default_type);
-    }
     if (data.invited_by_id !== undefined) {
       updates.push(`invited_by_id = $${paramIndex++}`);
       values.push(data.invited_by_id);
@@ -138,7 +133,7 @@ export class PostgresPlayerRepository implements PlayerRepository {
     const sql = `
       UPDATE players SET ${updates.join(', ')}
       WHERE id = $${paramIndex}
-      RETURNING id, profile_id, name, nickname, phone, stars, position, speed, default_type, invited_by_id, status, created_at
+      RETURNING id, profile_id, name, nickname, phone, stars, position, speed, invited_by_id, status, created_at
     `;
 
     const result = await this.sqlExecutor.query<PlayerRecord>(sql, values);

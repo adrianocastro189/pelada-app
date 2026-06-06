@@ -244,6 +244,74 @@ a capacidade total como **nº de times × jogadores por time**. Ajuste pendente,
 
 ---
 
+## Sessão de mensagens + posição (2026-06-05, parte 3)
+
+### Mensagens (spec módulo 8)
+
+A lógica de domínio já existia em `src/domain/services/MessageBuilders.ts` (testada), mas **nunca
+tinha sido plugada na UI**. Foi isso que se fez.
+
+- Novo componente reutilizável `src/ui/components/MessageCard.tsx` (+ CSS + teste): título, texto
+  pronto para WhatsApp e botão **📋 Copiar** com confirmação "✓ Copiado"; mostra dica quando vazio.
+- Novo accordion **Mensagens 💬** em `src/ui/screens/PeladaScreen/PeladaScreen.tsx` com:
+  - **Convocação** (8.1) — usa `profiles.convocation_template` (editável no ConfigScreen) com os
+    placeholders `{{data}}`/`{{hora}}`/`{{local}}`/`{{custo}}` preenchidos pela pelada. PeladaScreen
+    passou a carregar o perfil (`getProfile`).
+  - **Times Sorteados** (8.2) — times na ordem do sorteio, 🧤/⚽ por slot do roster.
+  - **Checklist de Pagamentos** (8.3) — alfabético, ✅/❌; goleiros só quando `goalkeeper_pays`.
+
+### Refactor do campo de posição (CRÍTICO — exige migração no banco)
+
+**Problema:** existiam **dois campos binários redundantes** no peladeiro — `position` (goalkeeper/line)
+e `default_type` (goalkeeper/line) — e o "Posicionamento (Defesa/Meio/Ataque)" da spec **nunca foi
+implementado**. Decisão (do usuário): fundir tudo num **único campo `position` = goleiro | defesa |
+meio | ataque**, onde `goalkeeper` define o comportamento de goleiro (slot + sorteio) e os demais
+alimentam o balanceamento posicional do sorteio.
+
+**Mudanças de código:**
+- `src/domain/value-objects/types.ts` — `Position` agora tem 4 valores; novo helper
+  `positionToSlotType()` (goleiro → slot goleiro, resto → slot linha).
+- `src/ports/repositories/PlayerRepository.ts` — tipo `PlayerPosition`; **removido `default_type`** de
+  `PlayerRecord`/`CreatePlayerInput`/`UpdatePlayerInput`.
+- `src/infrastructure/db/repositories/PostgresPlayerRepository.ts` e os fakes — `default_type` fora
+  do INSERT/SELECT/UPDATE.
+- `src/ui/screens/PlayersScreen/PlayersScreen.tsx` — os **dois selects viraram um único** (🧤 Goleiro /
+  🛡️ Defesa / 🎯 Meio / ⚔️ Ataque); rótulo em português no card.
+- `src/ui/screens/PeladaScreen/PeladaScreen.tsx` — slot do roster agora **derivado da posição** via
+  `positionToSlotType()`.
+- `src/domain/services/TeamDrawService.ts` — a posição agora é **desempate real na alocação** (spec
+  critério #2): entre times empatados em estrelas, o jogador vai ao time com menos jogadores da mesma
+  posição. Goleiro continua tratado pelo slot do roster (1 por time quando nº goleiros = nº times).
+
+**Migração necessária — `0010_player_position_field` (AINDA NÃO APLICADA no Neon):**
+
+Sintoma se não aplicada: `invalid input value for enum player_position: "defense"` ao salvar peladeiro.
+Como o `pelada_app` não tem DDL, rodar no **SQL Editor do Neon** com o owner:
+
+```sql
+BEGIN;
+ALTER TABLE players ALTER COLUMN position DROP DEFAULT;
+ALTER TYPE player_position RENAME TO player_position_old;
+CREATE TYPE player_position AS ENUM ('goalkeeper', 'defense', 'midfield', 'attack');
+ALTER TABLE players
+  ALTER COLUMN position TYPE player_position
+  USING (CASE WHEN position::text = 'goalkeeper' THEN 'goalkeeper' ELSE 'midfield' END)::player_position;
+ALTER TABLE players ALTER COLUMN position SET DEFAULT 'midfield';
+DROP TYPE player_position_old;
+ALTER TABLE players DROP COLUMN default_type;
+INSERT INTO schema_migrations (id) VALUES ('0010_player_position_field');
+COMMIT;
+```
+
+(Players `line` existentes viram `midfield`; goleiros mantêm. `default_type` é dropado.)
+
+### Verificação
+
+- `tsc -b` limpo (exceto o erro pré-existente de `NeonSqlExecutor.ts`, pendente nº 2 abaixo).
+- Suíte: 372 passando; as mesmas 3 falhas pré-existentes em `NeonSqlExecutor.test.ts`.
+
+---
+
 ## Pendências / pontos de atenção
 
 - **Permissão do `pelada_app` no Neon:** o usuário de produção não pode criar tabelas. O `npm run migration:up` só vai funcionar com uma connection string de um usuário com permissão de DDL (ex: `neondb_owner`). Para novas migrations, rodar manualmente no SQL Editor do Neon ou resolver a permissão com `GRANT CREATE ON SCHEMA public TO pelada_app`.

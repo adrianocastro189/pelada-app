@@ -45,9 +45,8 @@ describe('PostgresPlayerRepository (Integration)', () => {
       nickname: 'Jão',
       phone: '11999999999',
       stars: 3.5,
-      position: 'line',
+      position: 'midfield',
       speed: 'fast',
-      default_type: 'line',
       invited_by_id: null,
     });
 
@@ -65,7 +64,6 @@ describe('PostgresPlayerRepository (Integration)', () => {
       stars: 3,
       position: 'goalkeeper',
       speed: 'medium',
-      default_type: 'goalkeeper',
     });
 
     expect(result.nickname).toBeNull();
@@ -82,9 +80,8 @@ describe('PostgresPlayerRepository (Integration)', () => {
     const active = await repo.create(profileId, {
       name: 'Active',
       stars: 3,
-      position: 'line',
+      position: 'midfield',
       speed: 'medium',
-      default_type: 'line',
     });
 
     const inactive = await repo.create(profileId, {
@@ -92,7 +89,6 @@ describe('PostgresPlayerRepository (Integration)', () => {
       stars: 2,
       position: 'goalkeeper',
       speed: 'slow',
-      default_type: 'goalkeeper',
     });
 
     await repo.inactivate(inactive.id);
@@ -106,9 +102,8 @@ describe('PostgresPlayerRepository (Integration)', () => {
     const active = await repo.create(profileId, {
       name: 'Active',
       stars: 3,
-      position: 'line',
+      position: 'midfield',
       speed: 'medium',
-      default_type: 'line',
     });
 
     const inactive = await repo.create(profileId, {
@@ -116,7 +111,6 @@ describe('PostgresPlayerRepository (Integration)', () => {
       stars: 2,
       position: 'goalkeeper',
       speed: 'slow',
-      default_type: 'goalkeeper',
     });
 
     await repo.inactivate(inactive.id);
@@ -131,9 +125,8 @@ describe('PostgresPlayerRepository (Integration)', () => {
     const player = await repo.create(profileId, {
       name: 'Test',
       stars: 3,
-      position: 'line',
+      position: 'midfield',
       speed: 'medium',
-      default_type: 'line',
     });
 
     const result = await repo.inactivate(player.id);
@@ -152,9 +145,8 @@ describe('PostgresPlayerRepository (Integration)', () => {
     const player = await repo.create(profileId, {
       name: 'Test',
       stars: 3,
-      position: 'line',
+      position: 'midfield',
       speed: 'medium',
-      default_type: 'line',
     });
 
     await repo.inactivate(player.id);
@@ -169,9 +161,8 @@ describe('PostgresPlayerRepository (Integration)', () => {
     const player = await repo.create(profileId, {
       name: 'Original',
       stars: 2,
-      position: 'line',
+      position: 'midfield',
       speed: 'medium',
-      default_type: 'line',
     });
 
     const updated = await repo.update(player.id, { stars: 4.5 });
@@ -183,9 +174,8 @@ describe('PostgresPlayerRepository (Integration)', () => {
     const active = await repo.create(profileId, {
       name: 'João Silva',
       stars: 3,
-      position: 'line',
+      position: 'midfield',
       speed: 'medium',
-      default_type: 'line',
     });
 
     const inactive = await repo.create(profileId, {
@@ -193,7 +183,6 @@ describe('PostgresPlayerRepository (Integration)', () => {
       stars: 2,
       position: 'goalkeeper',
       speed: 'slow',
-      default_type: 'goalkeeper',
     });
 
     await repo.inactivate(inactive.id);

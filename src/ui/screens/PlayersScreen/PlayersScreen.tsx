@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Button, Card, Input, BottomSheet, Badge } from '@ui/components';
 import { useApp } from '@ui/AppContext';
-import type { PlayerRecord } from '@ports/repositories/PlayerRepository';
+import type { PlayerRecord, PlayerPosition } from '@ports/repositories/PlayerRepository';
 import './PlayersScreen.css';
 
 interface PlayersScreenProps {
@@ -13,9 +13,16 @@ const emptyForm = {
   nickname: '',
   phone: '',
   stars: 3,
-  position: 'line' as 'goalkeeper' | 'line',
+  position: 'midfield' as PlayerPosition,
   speed: 'medium' as 'slow' | 'medium' | 'fast',
-  default_type: 'line' as 'goalkeeper' | 'line',
+};
+
+/** Portuguese label + emoji for each position. */
+const POSITION_META: Record<PlayerPosition, { emoji: string; name: string }> = {
+  goalkeeper: { emoji: '🧤', name: 'Goleiro' },
+  defense: { emoji: '🛡️', name: 'Defesa' },
+  midfield: { emoji: '🎯', name: 'Meio' },
+  attack: { emoji: '⚔️', name: 'Ataque' },
 };
 
 /**
@@ -76,7 +83,6 @@ export function PlayersScreen({ profileId }: PlayersScreenProps): JSX.Element {
       stars: player.stars,
       position: player.position,
       speed: player.speed,
-      default_type: player.default_type,
     });
     setShowSheet(true);
   };
@@ -90,7 +96,6 @@ export function PlayersScreen({ profileId }: PlayersScreenProps): JSX.Element {
       stars: formData.stars,
       position: formData.position,
       speed: formData.speed,
-      default_type: formData.default_type,
     };
     try {
       if (editing) {
@@ -119,8 +124,9 @@ export function PlayersScreen({ profileId }: PlayersScreenProps): JSX.Element {
     }
   };
 
-  const getPositionLabel = (position: string): string => {
-    return position === 'goalkeeper' ? '🧤' : '⚽';
+  const getPositionLabel = (position: PlayerPosition): string => {
+    const meta = POSITION_META[position];
+    return `${meta.emoji} ${meta.name}`;
   };
 
   const getSpeedLabel = (speed: string): string => {
@@ -198,7 +204,7 @@ export function PlayersScreen({ profileId }: PlayersScreenProps): JSX.Element {
 
                 <div className="player-card-stats">
                   <span className="stat">
-                    {getPositionLabel(player.position)} {player.position}
+                    {getPositionLabel(player.position)}
                   </span>
                   <span className="stat">
                     {getSpeedLabel(player.speed)} {player.speed}
@@ -260,11 +266,13 @@ export function PlayersScreen({ profileId }: PlayersScreenProps): JSX.Element {
               <label className="form-label">Posição</label>
               <select
                 value={formData.position}
-                onChange={e => setFormData({ ...formData, position: e.target.value as 'goalkeeper' | 'line' })}
+                onChange={e => setFormData({ ...formData, position: e.target.value as PlayerPosition })}
                 className="form-select"
               >
-                <option value="line">⚽ Linha</option>
                 <option value="goalkeeper">🧤 Goleiro</option>
+                <option value="defense">🛡️ Defesa</option>
+                <option value="midfield">🎯 Meio</option>
+                <option value="attack">⚔️ Ataque</option>
               </select>
             </div>
             <div>
@@ -293,17 +301,6 @@ export function PlayersScreen({ profileId }: PlayersScreenProps): JSX.Element {
                 onChange={e => setFormData({ ...formData, stars: parseFloat(e.target.value) })}
                 className="form-number"
               />
-            </div>
-            <div>
-              <label className="form-label">Tipo padrão</label>
-              <select
-                value={formData.default_type}
-                onChange={e => setFormData({ ...formData, default_type: e.target.value as 'goalkeeper' | 'line' })}
-                className="form-select"
-              >
-                <option value="line">⚽ Linha</option>
-                <option value="goalkeeper">🧤 Goleiro</option>
-              </select>
             </div>
           </div>
 

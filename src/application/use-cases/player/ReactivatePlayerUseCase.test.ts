@@ -10,9 +10,8 @@ describe('ReactivatePlayerUseCase', () => {
     const created = await repo.create('profile-1', {
       name: 'João',
       stars: 3,
-      position: 'line',
+      position: 'midfield',
       speed: 'medium',
-      default_type: 'line',
     });
 
     await repo.inactivate(created.id);

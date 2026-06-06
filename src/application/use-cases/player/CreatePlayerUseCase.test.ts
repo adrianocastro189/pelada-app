@@ -12,9 +12,8 @@ describe('CreatePlayerUseCase', () => {
       nickname: 'Jão',
       phone: '11999999999',
       stars: 3.5,
-      position: 'line',
+      position: 'midfield',
       speed: 'fast',
-      default_type: 'line',
       invited_by_id: 'other-player-id',
     });
 
@@ -32,9 +31,8 @@ describe('CreatePlayerUseCase', () => {
       useCase.execute('profile-1', {
         name: 'João',
         stars: -1,
-        position: 'line',
+        position: 'midfield',
         speed: 'medium',
-        default_type: 'line',
       })
     ).rejects.toThrow('Stars must be between 0 and 5');
   });
@@ -47,9 +45,8 @@ describe('CreatePlayerUseCase', () => {
       useCase.execute('profile-1', {
         name: 'João',
         stars: 5.1,
-        position: 'line',
+        position: 'midfield',
         speed: 'medium',
-        default_type: 'line',
       })
     ).rejects.toThrow('Stars must be between 0 and 5');
   });

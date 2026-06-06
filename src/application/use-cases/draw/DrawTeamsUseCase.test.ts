@@ -45,9 +45,8 @@ describe('DrawTeamsUseCase', () => {
     const player1 = await playerRepo.create('profile-1', {
       name: 'Player 1',
       stars: 3,
-      position: 'line',
+      position: 'midfield',
       speed: 'medium',
-      default_type: 'line',
     });
 
     await rosterRepo.addToRoster(pelada.id, player1.id, 'line');

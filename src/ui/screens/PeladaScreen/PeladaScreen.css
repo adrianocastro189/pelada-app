@@ -107,6 +107,11 @@
   text-align: right;
 }
 
+/* Messages Accordion */
+.pelada-messages {
+  gap: var(--space-3);
+}
+
 /* Roster Accordion */
 .roster-list {
   display: flex;

@@ -7,6 +7,7 @@ import { migration as m0006 } from './0006_create_pelada_players'
 import { migration as m0007 } from './0007_create_draw_assignments'
 import { migration as m0008 } from './0008_create_financial_records'
 import { migration as m0009 } from './0009_create_subcaixinhas'
+import { migration as m0010 } from './0010_player_position_field'
 import type { Migration } from '../MigrationRunner'
 
 /**
@@ -23,4 +24,5 @@ export const ALL_MIGRATIONS: readonly Migration[] = [
   m0007,
   m0008,
   m0009,
+  m0010,
 ]

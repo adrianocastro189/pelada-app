@@ -10,9 +10,8 @@ describe('GetPlayerUseCase', () => {
     const created = await repo.create('profile-1', {
       name: 'João',
       stars: 3,
-      position: 'line',
+      position: 'midfield',
       speed: 'medium',
-      default_type: 'line',
     });
 
     const result = await useCase.execute(created.id);

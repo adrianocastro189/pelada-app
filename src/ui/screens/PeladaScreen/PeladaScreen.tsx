@@ -1,6 +1,14 @@
 import { useEffect, useState } from 'react';
-import { Accordion, Button, BottomSheet } from '@ui/components';
+import { Accordion, Button, BottomSheet, MessageCard } from '@ui/components';
 import { useApp } from '@ui/AppContext';
+import {
+  buildConvocationMessage,
+  buildDrawnTeamsMessage,
+  buildPaymentChecklistMessage,
+  type TeamForMessage,
+} from '@domain/services';
+import { positionToSlotType } from '@domain/value-objects';
+import type { ProfileRecord } from '@ports/repositories/ProfileRepository';
 import type { PeladaRecord } from '@ports/repositories/PeladaRepository';
 import type { PeladaPlayerRecord } from '@ports/repositories/PeladaPlayerRepository';
 import type { DrawResult } from '@application/use-cases/draw/GetDrawUseCase';
@@ -20,6 +28,7 @@ interface PeladaScreenProps {
 export function PeladaScreen({ profileId, peladaId, onBack }: PeladaScreenProps): JSX.Element {
   const app = useApp();
   const [pelada, setPelada] = useState<PeladaRecord | null>(null);
+  const [profile, setProfile] = useState<ProfileRecord | null>(null);
   const [roster, setRoster] = useState<PeladaPlayerRecord[]>([]);
   const [draw, setDraw] = useState<DrawResult[]>([]);
   const [players, setPlayers] = useState<Map<string, PlayerRecord>>(new Map());
@@ -45,13 +54,15 @@ export function PeladaScreen({ profileId, peladaId, onBack }: PeladaScreenProps)
     const loadPeladaData = async () => {
       setLoading(true);
       try {
-        const [peladaData, rosterData, drawData] = await Promise.all([
+        const [peladaData, profileData, rosterData, drawData] = await Promise.all([
           app.getPelada.execute(peladaId),
+          app.getProfile.execute(profileId),
           app.getRoster.execute(peladaId),
           app.getDraw.execute(peladaId),
         ]);
 
         setPelada(peladaData);
+        setProfile(profileData);
         setRoster(rosterData);
         setDraw(drawData);
 
@@ -68,7 +79,7 @@ export function PeladaScreen({ profileId, peladaId, onBack }: PeladaScreenProps)
     };
 
     loadPeladaData();
-  }, [peladaId, app]);
+  }, [peladaId, profileId, app]);
 
   const openAddRoster = async () => {
     setShowAddRoster(true);
@@ -82,7 +93,7 @@ export function PeladaScreen({ profileId, peladaId, onBack }: PeladaScreenProps)
 
   const handleAddToRoster = async (player: PlayerRecord) => {
     try {
-      await app.addToRoster.execute(peladaId, player.id, player.default_type);
+      await app.addToRoster.execute(peladaId, player.id, positionToSlotType(player.position));
       await reloadRoster();
     } catch (error) {
       console.error('Error adding player to roster:', error);
@@ -151,6 +162,41 @@ export function PeladaScreen({ profileId, peladaId, onBack }: PeladaScreenProps)
   const formatCurrency = (cents: number): string => {
     return `R$ ${(cents / 100).toFixed(2)}`;
   };
+
+  // Convocation message (spec 8.1): profile template with pelada placeholders.
+  const convocationMessage = profile?.convocation_template
+    ? buildConvocationMessage(profile.convocation_template, {
+        data: formatDate(pelada.date),
+        hora: pelada.time ?? '',
+        local: pelada.location ?? '',
+        custo: formatCurrency(pelada.cost_per_player),
+      })
+    : '';
+
+  // Slot type per player, as configured in the roster (defines 🧤 vs ⚽).
+  const slotByPlayerId = new Map(roster.map(e => [e.player_id, e.slot_type]));
+
+  // Drawn-teams message (spec 8.2): teams in draw order, players with 🧤/⚽.
+  // Goalkeepers left out of the draw are naturally absent from the assignments.
+  const drawnTeamsForMessage: TeamForMessage[] = draw.map(result => ({
+    name: result.team.name,
+    players: result.players.map(assignment => ({
+      name: players.get(assignment.player_id)?.name || assignment.player_id,
+      slotType: slotByPlayerId.get(assignment.player_id) ?? 'line',
+    })),
+  }));
+  const drawnTeamsMessage = buildDrawnTeamsMessage(drawnTeamsForMessage);
+
+  // Payment checklist message (spec 8.3): alphabetical, ✅/❌.
+  // Goalkeepers appear only when the pelada charges them.
+  const paymentChecklistMessage = buildPaymentChecklistMessage(
+    roster
+      .filter(e => e.slot_type !== 'goalkeeper' || pelada.goalkeeper_pays)
+      .map(e => ({
+        name: players.get(e.player_id)?.name || e.player_id,
+        paid: e.paid,
+      })),
+  );
 
   return (
     <div className="pelada-screen">
@@ -316,6 +362,27 @@ export function PeladaScreen({ profileId, peladaId, onBack }: PeladaScreenProps)
             </div>
           )}
         </Accordion>
+
+        {/* Messages Accordion */}
+        <Accordion title="Mensagens" icon="💬">
+          <div className="accordion-content pelada-messages">
+            <MessageCard
+              title="Convocação"
+              message={convocationMessage}
+              emptyHint="Defina o template de convocação em Configurações"
+            />
+            <MessageCard
+              title="Times Sorteados"
+              message={drawnTeamsMessage}
+              emptyHint="Sorteie os times para gerar a mensagem"
+            />
+            <MessageCard
+              title="Checklist de Pagamentos"
+              message={paymentChecklistMessage}
+              emptyHint="Adicione jogadores para gerar a mensagem"
+            />
+          </div>
+        </Accordion>
       </main>
 
       {/* Add-to-roster sheet */}
@@ -340,7 +407,7 @@ export function PeladaScreen({ profileId, peladaId, onBack }: PeladaScreenProps)
                 >
                   <span>
                     {player.name}
-                    {player.default_type === 'goalkeeper' && ' 🧤'}
+                    {player.position === 'goalkeeper' && ' 🧤'}
                   </span>
                   <span className="roster-picker-add">+</span>
                 </button>

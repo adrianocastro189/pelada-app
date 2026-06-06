@@ -7,11 +7,15 @@ import type { DrawPlayer } from './TeamDrawService'
 const strategy = new TotalStarsStrategy()
 
 function makeLine(id: string, stars: number): DrawPlayer {
-  return { id, stars, position: 'line', speed: 'medium', slotType: 'line' }
+  return { id, stars, position: 'midfield', speed: 'medium', slotType: 'line' }
 }
 
 function makeGoalkeeper(id: string, stars: number): DrawPlayer {
   return { id, stars, position: 'goalkeeper', speed: 'medium', slotType: 'goalkeeper' }
+}
+
+function makePos(id: string, stars: number, position: DrawPlayer['position']): DrawPlayer {
+  return { id, stars, position, speed: 'medium', slotType: 'line' }
 }
 
 describe('TeamDrawService', () => {
@@ -71,6 +75,25 @@ describe('TeamDrawService', () => {
       strategy.score(t.playerIds.map(id => players.find(p => p.id === id)?.stars ?? 0))
     )
     expect(scores[0]).toBeCloseTo(scores[1], 5)
+  })
+
+  it('spreads positions across teams when stars are tied (criterion #2)', () => {
+    // 2 defenders + 2 attackers, all equal stars: each team should end up with
+    // one of each position rather than doubling up.
+    const players = [
+      makePos('d1', 3.0, 'defense'),
+      makePos('d2', 3.0, 'defense'),
+      makePos('a1', 3.0, 'attack'),
+      makePos('a2', 3.0, 'attack'),
+    ]
+    const result = service.draw(players, { teamCount: 2 }, new SeededRandomSource(3), strategy)
+    const posOf = (id: string) => players.find(p => p.id === id)!.position
+    result.forEach(team => {
+      const defenders = team.playerIds.filter(id => posOf(id) === 'defense').length
+      const attackers = team.playerIds.filter(id => posOf(id) === 'attack').length
+      expect(defenders).toBe(1)
+      expect(attackers).toBe(1)
+    })
   })
 
   it('is deterministic for the same seed', () => {

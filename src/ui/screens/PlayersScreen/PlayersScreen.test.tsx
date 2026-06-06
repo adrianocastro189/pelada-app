@@ -21,9 +21,8 @@ const mockPlayers: PlayerRecord[] = [
     nickname: 'Joãozinho',
     phone: '11999999999',
     stars: 3.5,
-    position: 'line',
+    position: 'midfield',
     speed: 'fast',
-    default_type: 'line',
     status: 'active',
     invited_by_id: null,
     created_at: new Date(),
@@ -37,7 +36,6 @@ const mockPlayers: PlayerRecord[] = [
     stars: 4,
     position: 'goalkeeper',
     speed: 'medium',
-    default_type: 'goalkeeper',
     status: 'active',
     invited_by_id: null,
     created_at: new Date(),
@@ -49,9 +47,8 @@ const mockPlayers: PlayerRecord[] = [
     nickname: null,
     phone: '11988888888',
     stars: 2.5,
-    position: 'line',
+    position: 'midfield',
     speed: 'slow',
-    default_type: 'line',
     status: 'inactive',
     invited_by_id: null,
     created_at: new Date(),
@@ -117,8 +114,8 @@ describe('PlayersScreen', () => {
   it('displays player stats (position, speed, stars)', async () => {
     render(<PlayersScreen profileId="prof-1" />);
     await waitFor(() => {
-      expect(screen.getByText(/⚽ line/)).toBeInTheDocument();
-      expect(screen.getByText(/🧤 goalkeeper/)).toBeInTheDocument();
+      expect(screen.getByText(/🎯 Meio/)).toBeInTheDocument();
+      expect(screen.getByText(/🧤 Goleiro/)).toBeInTheDocument();
       expect(screen.getByText(/⚡ fast/)).toBeInTheDocument();
       expect(screen.getByText(/3.5/)).toBeInTheDocument();
     });

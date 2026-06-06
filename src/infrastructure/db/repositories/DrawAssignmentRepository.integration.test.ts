@@ -62,14 +62,14 @@ describe('PostgresDrawAssignmentRepository (Integration)', () => {
     // Create test players
     playerId1 = uuid();
     await executor.query(
-      'INSERT INTO players (id, profile_id, name, stars, position, speed, default_type, status, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW()) RETURNING id',
-      [playerId1, profileId, 'João', 3, 'line', 'medium', 'line', 'active']
+      'INSERT INTO players (id, profile_id, name, stars, position, speed, status, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW()) RETURNING id',
+      [playerId1, profileId, 'João', 3, 'midfield', 'medium', 'active']
     );
 
     playerId2 = uuid();
     await executor.query(
-      'INSERT INTO players (id, profile_id, name, stars, position, speed, default_type, status, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW()) RETURNING id',
-      [playerId2, profileId, 'Pedro', 2, 'goalkeeper', 'slow', 'goalkeeper', 'active']
+      'INSERT INTO players (id, profile_id, name, stars, position, speed, status, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW()) RETURNING id',
+      [playerId2, profileId, 'Pedro', 2, 'goalkeeper', 'slow', 'active']
     );
   });
 
