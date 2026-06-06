@@ -5,6 +5,7 @@ import {
   buildConvocationMessage,
   buildDrawnTeamsMessage,
   buildPaymentChecklistMessage,
+  computeTeamStats,
   type TeamForMessage,
 } from '@domain/services';
 import { positionToSlotType } from '@domain/value-objects';
@@ -307,18 +308,42 @@ export function PeladaScreen({ profileId, peladaId, onBack }: PeladaScreenProps)
               </div>
             ) : (
               <div className="draw-teams">
-                {draw.map(result => (
-                  <div key={result.team.id} className="draw-team">
-                    <h4 className="draw-team-name">{result.team.name}</h4>
-                    <ul className="draw-team-players">
-                      {result.players.map(assignment => (
-                        <li key={assignment.id}>
-                          {players.get(assignment.player_id)?.name || assignment.player_id}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
+                {draw.map(result => {
+                  const teamPlayers = result.players
+                    .map(a => players.get(a.player_id))
+                    .filter((p): p is PlayerRecord => p !== undefined);
+                  const stats = computeTeamStats(teamPlayers);
+                  return (
+                    <div key={result.team.id} className="draw-team">
+                      <h4 className="draw-team-name">{result.team.name}</h4>
+                      <ul className="draw-team-players">
+                        {result.players.map(assignment => (
+                          <li key={assignment.id}>
+                            {players.get(assignment.player_id)?.name || assignment.player_id}
+                          </li>
+                        ))}
+                      </ul>
+                      {/* Admin-only stats — never included in the message */}
+                      <div className="draw-team-stats">
+                        <div className="draw-stat-row">
+                          <span>⭐ Total: <strong>{stats.totalStars.toFixed(1)}</strong></span>
+                          <span>Média: <strong>{stats.averageStars.toFixed(2)}</strong></span>
+                        </div>
+                        <div className="draw-stat-row">
+                          <span>🛡️ {stats.positionCounts.defense}</span>
+                          <span>🎯 {stats.positionCounts.midfield}</span>
+                          <span>⚔️ {stats.positionCounts.attack}</span>
+                          <span>🧤 {stats.positionCounts.goalkeeper}</span>
+                        </div>
+                        <div className="draw-stat-row">
+                          <span>🐢 {stats.speedCounts.slow}</span>
+                          <span>🏃 {stats.speedCounts.medium}</span>
+                          <span>⚡ {stats.speedCounts.fast}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
                 <Button
                   variant="secondary"
                   fullWidth

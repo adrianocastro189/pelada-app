@@ -227,6 +227,27 @@
   font-size: var(--font-size-body);
 }
 
+.draw-team-stats {
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-neutral-200);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.draw-stat-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  font-size: var(--font-size-label);
+  color: var(--color-neutral-600);
+}
+
+.draw-stat-row strong {
+  color: var(--color-neutral-800);
+}
+
 /* Payment Accordion */
 .payment-table {
   display: flex;
