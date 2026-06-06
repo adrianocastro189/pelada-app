@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Button, BottomSheet, Input, Card, FAB } from '@ui/components';
+import { Button, BottomSheet, Input, Textarea, Card, FAB } from '@ui/components';
 import { useApp } from '@ui/AppContext';
 import type { PeladaRecord } from '@ports/repositories/PeladaRepository';
 import './PeladasScreen.css';
@@ -8,6 +8,17 @@ interface PeladasScreenProps {
   profileId: string;
   onSelectPelada?: (peladaId: string) => void;
 }
+
+const emptyForm = {
+  date: new Date().toISOString().split('T')[0],
+  time: '',
+  location: '',
+  team_names: 'Time A\nTime B',
+  players_per_team: 5,
+  max_goalkeepers: 1,
+  cost_per_player: 0,
+  goalkeeper_pays: false,
+};
 
 /**
  * Screen for listing and managing peladas (matches) in a profile.
@@ -19,15 +30,7 @@ export function PeladasScreen({ profileId, onSelectPelada }: PeladasScreenProps)
   const [loading, setLoading] = useState(false);
   const [showCreateSheet, setShowCreateSheet] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-  const [formData, setFormData] = useState({
-    date: new Date().toISOString().split('T')[0],
-    time: '',
-    location: '',
-    players_per_team: 5,
-    max_goalkeepers: 1,
-    cost_per_player: 0,
-    goalkeeper_pays: false,
-  });
+  const [formData, setFormData] = useState({ ...emptyForm });
 
   // Load peladas on mount and when profileId changes
   useEffect(() => {
@@ -45,26 +48,27 @@ export function PeladasScreen({ profileId, onSelectPelada }: PeladasScreenProps)
 
   const handleCreatePelada = async () => {
     if (!formData.date) return;
+    const teamNames = formData.team_names
+      .split('\n')
+      .map(n => n.trim())
+      .filter(n => n.length > 0);
+    if (teamNames.length < 2) return;
     try {
-      await app.createPelada.execute(profileId, {
-        date: new Date(formData.date),
-        time: formData.time || null,
-        location: formData.location || null,
-        players_per_team: formData.players_per_team,
-        max_goalkeepers: formData.max_goalkeepers,
-        cost_per_player: formData.cost_per_player,
-        goalkeeper_pays: formData.goalkeeper_pays,
-      });
+      await app.createPelada.execute(
+        profileId,
+        {
+          date: new Date(formData.date),
+          time: formData.time || null,
+          location: formData.location || null,
+          players_per_team: formData.players_per_team,
+          max_goalkeepers: formData.max_goalkeepers,
+          cost_per_player: formData.cost_per_player,
+          goalkeeper_pays: formData.goalkeeper_pays,
+        },
+        teamNames,
+      );
       // Reset form and reload peladas
-      setFormData({
-        date: new Date().toISOString().split('T')[0],
-        time: '',
-        location: '',
-        players_per_team: 5,
-        max_goalkeepers: 1,
-        cost_per_player: 0,
-        goalkeeper_pays: false,
-      });
+      setFormData({ ...emptyForm });
       setShowCreateSheet(false);
       const result = await app.listPeladas.execute(profileId);
       setPeladas(result);
@@ -167,15 +171,7 @@ export function PeladasScreen({ profileId, onSelectPelada }: PeladasScreenProps)
         open={showCreateSheet}
         onClose={() => {
           setShowCreateSheet(false);
-          setFormData({
-            date: new Date().toISOString().split('T')[0],
-            time: '',
-            location: '',
-            players_per_team: 5,
-            max_goalkeepers: 1,
-            cost_per_player: 0,
-            goalkeeper_pays: false,
-          });
+          setFormData({ ...emptyForm });
         }}
         title="Nova pelada"
       >
@@ -205,6 +201,13 @@ export function PeladasScreen({ profileId, onSelectPelada }: PeladasScreenProps)
             placeholder="Ex: Quadra Centro"
             value={formData.location}
             onChange={e => setFormData({ ...formData, location: e.target.value })}
+          />
+          <Textarea
+            label="Nomes dos times (um por linha)"
+            placeholder={'Time A\nTime B'}
+            rows={3}
+            value={formData.team_names}
+            onChange={e => setFormData({ ...formData, team_names: e.target.value })}
           />
           <div className="peladas-form-row">
             <Input

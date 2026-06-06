@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Accordion, Button } from '@ui/components';
+import { Accordion, Button, BottomSheet } from '@ui/components';
 import { useApp } from '@ui/AppContext';
 import type { PeladaRecord } from '@ports/repositories/PeladaRepository';
 import type { PeladaPlayerRecord } from '@ports/repositories/PeladaPlayerRepository';
@@ -17,7 +17,7 @@ interface PeladaScreenProps {
  * Screen for viewing and managing a single pelada (match).
  * Displays pelada info, roster, draw, and payments in accordions.
  */
-export function PeladaScreen({ peladaId, onBack }: PeladaScreenProps): JSX.Element {
+export function PeladaScreen({ profileId, peladaId, onBack }: PeladaScreenProps): JSX.Element {
   const app = useApp();
   const [pelada, setPelada] = useState<PeladaRecord | null>(null);
   const [roster, setRoster] = useState<PeladaPlayerRecord[]>([]);
@@ -25,6 +25,20 @@ export function PeladaScreen({ peladaId, onBack }: PeladaScreenProps): JSX.Eleme
   const [players, setPlayers] = useState<Map<string, PlayerRecord>>(new Map());
   const [loading, setLoading] = useState(true);
   const [drawingTeams, setDrawingTeams] = useState(false);
+  const [showAddRoster, setShowAddRoster] = useState(false);
+  const [profilePlayers, setProfilePlayers] = useState<PlayerRecord[]>([]);
+
+  // Reload the roster and the player lookup map used by the payment/draw tables.
+  const reloadRoster = async () => {
+    const rosterData = await app.getRoster.execute(peladaId);
+    setRoster(rosterData);
+    const playerMap = new Map<string, PlayerRecord>();
+    for (const rosterEntry of rosterData) {
+      const player = await app.getPlayer.execute(rosterEntry.player_id);
+      playerMap.set(rosterEntry.player_id, player);
+    }
+    setPlayers(playerMap);
+  };
 
   // Load pelada data on mount
   useEffect(() => {
@@ -55,6 +69,34 @@ export function PeladaScreen({ peladaId, onBack }: PeladaScreenProps): JSX.Eleme
 
     loadPeladaData();
   }, [peladaId, app]);
+
+  const openAddRoster = async () => {
+    setShowAddRoster(true);
+    try {
+      const active = await app.listPlayers.execute(profileId, false);
+      setProfilePlayers(active);
+    } catch (error) {
+      console.error('Error loading players:', error);
+    }
+  };
+
+  const handleAddToRoster = async (player: PlayerRecord) => {
+    try {
+      await app.addToRoster.execute(peladaId, player.id, player.default_type);
+      await reloadRoster();
+    } catch (error) {
+      console.error('Error adding player to roster:', error);
+    }
+  };
+
+  const handleRemoveFromRoster = async (playerId: string) => {
+    try {
+      await app.removeFromRoster.execute(peladaId, playerId);
+      await reloadRoster();
+    } catch (error) {
+      console.error('Error removing player from roster:', error);
+    }
+  };
 
   const handleDrawTeams = async () => {
     setDrawingTeams(true);
@@ -168,10 +210,10 @@ export function PeladaScreen({ peladaId, onBack }: PeladaScreenProps): JSX.Eleme
 
         {/* Roster Accordion */}
         <Accordion title={`Roster (${roster.length})`} icon="👥">
-          {roster.length === 0 ? (
-            <p className="accordion-empty">Nenhum jogador adicionado</p>
-          ) : (
-            <div className="accordion-content">
+          <div className="accordion-content">
+            {roster.length === 0 ? (
+              <p className="accordion-empty">Nenhum jogador adicionado</p>
+            ) : (
               <div className="roster-list">
                 {roster.map(entry => (
                   <div key={entry.id} className="roster-item">
@@ -179,11 +221,27 @@ export function PeladaScreen({ peladaId, onBack }: PeladaScreenProps): JSX.Eleme
                       {players.get(entry.player_id)?.name || entry.player_id}
                       {entry.slot_type === 'goalkeeper' && ' 🧤'}
                     </span>
+                    <button
+                      className="roster-remove"
+                      onClick={() => handleRemoveFromRoster(entry.player_id)}
+                      aria-label={`Remover ${players.get(entry.player_id)?.name || entry.player_id} do roster`}
+                      title="Remover"
+                    >
+                      ✕
+                    </button>
                   </div>
                 ))}
               </div>
-            </div>
-          )}
+            )}
+            <Button
+              variant="secondary"
+              fullWidth
+              onClick={openAddRoster}
+              style={{ marginTop: 'var(--space-3)' }}
+            >
+              + Adicionar jogador
+            </Button>
+          </div>
         </Accordion>
 
         {/* Draw Accordion */}
@@ -259,6 +317,38 @@ export function PeladaScreen({ peladaId, onBack }: PeladaScreenProps): JSX.Eleme
           )}
         </Accordion>
       </main>
+
+      {/* Add-to-roster sheet */}
+      <BottomSheet
+        open={showAddRoster}
+        onClose={() => setShowAddRoster(false)}
+        title="Adicionar ao roster"
+      >
+        {(() => {
+          const rosterIds = new Set(roster.map(e => e.player_id));
+          const available = profilePlayers.filter(p => !rosterIds.has(p.id));
+          if (available.length === 0) {
+            return <p className="accordion-empty">Nenhum jogador disponível</p>;
+          }
+          return (
+            <div className="roster-picker">
+              {available.map(player => (
+                <button
+                  key={player.id}
+                  className="roster-picker-item"
+                  onClick={() => handleAddToRoster(player)}
+                >
+                  <span>
+                    {player.name}
+                    {player.default_type === 'goalkeeper' && ' 🧤'}
+                  </span>
+                  <span className="roster-picker-add">+</span>
+                </button>
+              ))}
+            </div>
+          );
+        })()}
+      </BottomSheet>
     </div>
   );
 }

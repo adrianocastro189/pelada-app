@@ -8,6 +8,16 @@ interface PlayersScreenProps {
   profileId: string;
 }
 
+const emptyForm = {
+  name: '',
+  nickname: '',
+  phone: '',
+  stars: 3,
+  position: 'line' as 'goalkeeper' | 'line',
+  speed: 'medium' as 'slow' | 'medium' | 'fast',
+  default_type: 'line' as 'goalkeeper' | 'line',
+};
+
 /**
  * Screen for managing players in a profile.
  * Lists, creates, edits, and manages player status (active/inactive).
@@ -17,16 +27,16 @@ export function PlayersScreen({ profileId }: PlayersScreenProps): JSX.Element {
   const [players, setPlayers] = useState<PlayerRecord[]>([]);
   const [showInactive, setShowInactive] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [showCreateSheet, setShowCreateSheet] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    nickname: '',
-    phone: '',
-    stars: 3,
-    position: 'line' as 'goalkeeper' | 'line',
-    speed: 'medium' as 'slow' | 'medium' | 'fast',
-    default_type: 'line' as 'goalkeeper' | 'line',
-  });
+  const [showSheet, setShowSheet] = useState(false);
+  // The player currently being edited, or null when creating a new one.
+  const [editing, setEditing] = useState<PlayerRecord | null>(null);
+  const [confirmInactivate, setConfirmInactivate] = useState(false);
+  const [formData, setFormData] = useState(emptyForm);
+
+  const reloadPlayers = async () => {
+    const result = await app.listPlayers.execute(profileId, showInactive);
+    setPlayers(result);
+  };
 
   // Load players on mount and when showInactive changes
   useEffect(() => {
@@ -42,46 +52,68 @@ export function PlayersScreen({ profileId }: PlayersScreenProps): JSX.Element {
     loadPlayers();
   }, [profileId, showInactive, app.listPlayers]);
 
-  const handleCreatePlayer = async () => {
+  const closeSheet = () => {
+    setShowSheet(false);
+    setEditing(null);
+    setConfirmInactivate(false);
+    setFormData(emptyForm);
+  };
+
+  const openCreateSheet = () => {
+    setEditing(null);
+    setConfirmInactivate(false);
+    setFormData(emptyForm);
+    setShowSheet(true);
+  };
+
+  const openEditSheet = (player: PlayerRecord) => {
+    setEditing(player);
+    setConfirmInactivate(false);
+    setFormData({
+      name: player.name,
+      nickname: player.nickname ?? '',
+      phone: player.phone ?? '',
+      stars: player.stars,
+      position: player.position,
+      speed: player.speed,
+      default_type: player.default_type,
+    });
+    setShowSheet(true);
+  };
+
+  const handleSubmit = async () => {
     if (!formData.name.trim()) return;
+    const payload = {
+      name: formData.name.trim(),
+      nickname: formData.nickname || null,
+      phone: formData.phone || null,
+      stars: formData.stars,
+      position: formData.position,
+      speed: formData.speed,
+      default_type: formData.default_type,
+    };
     try {
-      await app.createPlayer.execute(profileId, {
-        name: formData.name.trim(),
-        nickname: formData.nickname || null,
-        phone: formData.phone || null,
-        stars: formData.stars,
-        position: formData.position,
-        speed: formData.speed,
-        default_type: formData.default_type,
-      });
-      // Reset form and reload
-      setFormData({
-        name: '',
-        nickname: '',
-        phone: '',
-        stars: 3,
-        position: 'line',
-        speed: 'medium',
-        default_type: 'line',
-      });
-      setShowCreateSheet(false);
-      const result = await app.listPlayers.execute(profileId, showInactive);
-      setPlayers(result);
+      if (editing) {
+        await app.updatePlayer.execute(editing.id, payload);
+      } else {
+        await app.createPlayer.execute(profileId, payload);
+      }
+      closeSheet();
+      await reloadPlayers();
     } catch (error) {
-      console.error('Error creating player:', error);
+      console.error('Error saving player:', error);
     }
   };
 
-  const handleToggleStatus = async (playerId: string, currentStatus: 'active' | 'inactive') => {
+  const handleToggleStatus = async (player: PlayerRecord) => {
     try {
-      if (currentStatus === 'active') {
-        await app.deactivatePlayer.execute(playerId);
+      if (player.status === 'active') {
+        await app.deactivatePlayer.execute(player.id);
       } else {
-        await app.reactivatePlayer.execute(playerId);
+        await app.reactivatePlayer.execute(player.id);
       }
-      // Reload players
-      const result = await app.listPlayers.execute(profileId, showInactive);
-      setPlayers(result);
+      closeSheet();
+      await reloadPlayers();
     } catch (error) {
       console.error('Error toggling player status:', error);
     }
@@ -149,14 +181,17 @@ export function PlayersScreen({ profileId }: PlayersScreenProps): JSX.Element {
                     <h3>{player.name}</h3>
                     {player.nickname && <p className="player-nickname">{player.nickname}</p>}
                   </div>
-                  <div className="player-card-status">
+                  <div className="player-card-actions">
+                    {player.status === 'inactive' && (
+                      <Badge label="Inativo" variant="default" />
+                    )}
                     <button
-                      className={`status-toggle ${player.status}`}
-                      onClick={() => handleToggleStatus(player.id, player.status)}
-                      aria-label={`Toggle ${player.name} status`}
-                      title={player.status === 'active' ? 'Inativar' : 'Reativar'}
+                      className="player-edit-button"
+                      onClick={() => openEditSheet(player)}
+                      aria-label={`Editar ${player.name}`}
+                      title="Editar"
                     >
-                      {player.status === 'active' ? '✅' : '⭕'}
+                      ✏️
                     </button>
                   </div>
                 </div>
@@ -180,35 +215,24 @@ export function PlayersScreen({ profileId }: PlayersScreenProps): JSX.Element {
         <Button
           variant="secondary"
           fullWidth
-          onClick={() => setShowCreateSheet(true)}
+          onClick={openCreateSheet}
           className="players-create-button"
         >
           + Adicionar jogador
         </Button>
       </main>
 
-      {/* Create sheet */}
+      {/* Create / edit sheet */}
       <BottomSheet
-        open={showCreateSheet}
-        onClose={() => {
-          setShowCreateSheet(false);
-          setFormData({
-            name: '',
-            nickname: '',
-            phone: '',
-            stars: 3,
-            position: 'line',
-            speed: 'medium',
-            default_type: 'line',
-          });
-        }}
-        title="Novo jogador"
+        open={showSheet}
+        onClose={closeSheet}
+        title={editing ? 'Editar jogador' : 'Novo jogador'}
       >
         <form
           className="players-create-form"
           onSubmit={e => {
             e.preventDefault();
-            handleCreatePlayer();
+            handleSubmit();
           }}
         >
           <Input
@@ -283,9 +307,58 @@ export function PlayersScreen({ profileId }: PlayersScreenProps): JSX.Element {
             </div>
           </div>
 
-          <Button variant="primary" fullWidth type="submit">
-            Adicionar
-          </Button>
+          {!confirmInactivate && (
+            <>
+              <Button variant="primary" fullWidth type="submit">
+                {editing ? 'Salvar' : 'Adicionar'}
+              </Button>
+
+              {editing && editing.status === 'active' && (
+                <Button
+                  variant="destructive"
+                  fullWidth
+                  type="button"
+                  onClick={() => setConfirmInactivate(true)}
+                >
+                  Inativar jogador
+                </Button>
+              )}
+              {editing && editing.status === 'inactive' && (
+                <Button
+                  variant="secondary"
+                  fullWidth
+                  type="button"
+                  onClick={() => handleToggleStatus(editing)}
+                >
+                  Reativar jogador
+                </Button>
+              )}
+            </>
+          )}
+
+          {editing && confirmInactivate && (
+            <div className="players-inactivate-confirm">
+              <p>Inativar <strong>{editing.name}</strong>? O histórico é preservado e você pode reativá-lo depois.</p>
+              <div className="players-inactivate-buttons">
+                <Button
+                  variant="ghost"
+                  fullWidth
+                  type="button"
+                  onClick={() => setConfirmInactivate(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  variant="destructive"
+                  fullWidth
+                  type="button"
+                  onClick={() => handleToggleStatus(editing)}
+                >
+                  Confirmar
+                </Button>
+              </div>
+            </div>
+          )}
         </form>
       </BottomSheet>
     </div>

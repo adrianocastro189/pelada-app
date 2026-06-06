@@ -94,25 +94,24 @@
   font-style: italic;
 }
 
-.player-card-status {
+.player-card-actions {
   flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
-.status-toggle {
+.player-edit-button {
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   padding: 0;
   transition: transform var(--transition-fast);
 }
 
-.status-toggle:active {
+.player-edit-button:active {
   transform: scale(1.2);
-}
-
-.status-toggle.inactive {
-  opacity: 0.6;
 }
 
 .player-card-stats {
@@ -151,6 +150,26 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-3);
+}
+
+.players-inactivate-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background-color: var(--color-neutral-100);
+  border-radius: var(--border-radius-sm);
+}
+
+.players-inactivate-confirm p {
+  margin: 0;
+  font-size: var(--font-size-label);
+  color: var(--color-neutral-700);
+}
+
+.players-inactivate-buttons {
+  display: flex;
+  gap: var(--space-2);
 }
 
 .form-label {

@@ -8,6 +8,19 @@ import { SqlExecutor } from '@ports/SqlExecutor';
 export class PostgresPlayerRepository implements PlayerRepository {
   constructor(private sqlExecutor: SqlExecutor) {}
 
+  /**
+   * Normalize a raw DB row into a PlayerRecord. The `stars` column is
+   * NUMERIC, which the pg driver returns as a string to preserve precision,
+   * so it must be coerced to a number to satisfy the port contract.
+   */
+  private mapRow(record: PlayerRecord): PlayerRecord {
+    return {
+      ...record,
+      stars: Number(record.stars),
+      created_at: new Date(record.created_at),
+    };
+  }
+
   async create(profileId: string, player: CreatePlayerInput): Promise<PlayerRecord> {
     const sql = `
       INSERT INTO players (profile_id, name, nickname, phone, stars, position, speed, default_type, invited_by_id, status)
@@ -27,7 +40,7 @@ export class PostgresPlayerRepository implements PlayerRepository {
     ]);
     const record = result.rows[0];
     if (!record) throw new Error('Failed to insert player');
-    return { ...record, created_at: new Date(record.created_at) };
+    return this.mapRow(record);
   }
 
   async findById(id: string): Promise<PlayerRecord | null> {
@@ -38,7 +51,7 @@ export class PostgresPlayerRepository implements PlayerRepository {
     const result = await this.sqlExecutor.query<PlayerRecord>(sql, [id]);
     if (result.rows.length === 0) return null;
     const record = result.rows[0];
-    return { ...record, created_at: new Date(record.created_at) };
+    return this.mapRow(record);
   }
 
   async listActiveByProfileId(profileId: string): Promise<PlayerRecord[]> {
@@ -47,7 +60,7 @@ export class PostgresPlayerRepository implements PlayerRepository {
       FROM players WHERE profile_id = $1 AND status = 'active' ORDER BY name ASC
     `;
     const result = await this.sqlExecutor.query<PlayerRecord>(sql, [profileId]);
-    return result.rows.map((r) => ({ ...r, created_at: new Date(r.created_at) }));
+    return result.rows.map((r) => this.mapRow(r));
   }
 
   async listAllByProfileId(profileId: string): Promise<PlayerRecord[]> {
@@ -56,7 +69,7 @@ export class PostgresPlayerRepository implements PlayerRepository {
       FROM players WHERE profile_id = $1 ORDER BY name ASC
     `;
     const result = await this.sqlExecutor.query<PlayerRecord>(sql, [profileId]);
-    return result.rows.map((r) => ({ ...r, created_at: new Date(r.created_at) }));
+    return result.rows.map((r) => this.mapRow(r));
   }
 
   async inactivate(id: string): Promise<boolean> {
@@ -78,7 +91,7 @@ export class PostgresPlayerRepository implements PlayerRepository {
       ORDER BY name ASC
     `;
     const result = await this.sqlExecutor.query<PlayerRecord>(sql, [profileId, `%${query}%`]);
-    return result.rows.map((r) => ({ ...r, created_at: new Date(r.created_at) }));
+    return result.rows.map((r) => this.mapRow(r));
   }
 
   async update(id: string, data: UpdatePlayerInput): Promise<PlayerRecord | null> {
@@ -131,6 +144,6 @@ export class PostgresPlayerRepository implements PlayerRepository {
     const result = await this.sqlExecutor.query<PlayerRecord>(sql, values);
     if (result.rows.length === 0) return null;
     const record = result.rows[0];
-    return { ...record, created_at: new Date(record.created_at) };
+    return this.mapRow(record);
   }
 }

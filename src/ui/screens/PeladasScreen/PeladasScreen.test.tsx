@@ -122,7 +122,11 @@ describe('PeladasScreen', () => {
     await userEvent.click(submitButton);
 
     await waitFor(() => {
-      expect(mockCreatePelada).toHaveBeenCalled();
+      expect(mockCreatePelada).toHaveBeenCalledWith(
+        'prof-1',
+        expect.objectContaining({ time: '14:30' }),
+        ['Time A', 'Time B'],
+      );
     });
   });
 

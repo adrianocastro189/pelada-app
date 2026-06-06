@@ -55,7 +55,7 @@ describe('PostgresPlayerRepository (Integration)', () => {
     expect(result.profile_id).toBe(profileId);
     expect(result.name).toBe('João');
     expect(result.nickname).toBe('Jão');
-    expect(Number(result.stars)).toBe(3.5);
+    expect(result.stars).toBe(3.5);
     expect(result.status).toBe('active');
   });
 
@@ -175,7 +175,7 @@ describe('PostgresPlayerRepository (Integration)', () => {
     });
 
     const updated = await repo.update(player.id, { stars: 4.5 });
-    expect(Number(updated?.stars)).toBe(4.5);
+    expect(updated?.stars).toBe(4.5);
     expect(updated?.name).toBe('Original');
   });
 

@@ -182,6 +182,68 @@ Também foi adicionado `disableWarningInBrowsers: true` na inicialização do `n
 
 ---
 
+## Sessão de correção de bugs (2026-06-05, parte 2)
+
+Sessão focada em bugs de UX/dados reportados ao usar o app com dados reais.
+
+### Bug 1 — `stars.toFixed is not a function` no cadastro de peladeiros
+
+**Causa raiz:** a coluna `stars` é `NUMERIC(2,1)`, e o driver `pg` retorna `NUMERIC`/`DECIMAL`
+como **string** (para preservar precisão). O tipo `PlayerRecord.stars: number` era uma mentira
+em runtime, e `stars.toFixed()` quebrava em `PlayersScreen`.
+
+**Correção:** coerção no repositório (que é quem promete `number` no contrato da porta).
+- `src/infrastructure/db/repositories/PostgresPlayerRepository.ts` — novo helper `mapRow` que
+  faz `stars: Number(record.stars)` e centraliza o `new Date(created_at)` (antes duplicado em 6 lugares).
+- `src/infrastructure/db/repositories/PlayerRepository.integration.test.ts` — removidos os
+  `Number(result.stars)` das asserções; o teste agora **exige** o tipo `number` em vez de mascarar
+  o defeito com coerção no próprio teste.
+
+### Bug 2 — Edição e inativação de peladeiros
+
+- **Faltava botão de editar:** `PlayersScreen` agora usa um único `BottomSheet` para criar e editar.
+  Cada card tem botão ✏️ que abre o cadastro pré-preenchido; o submit chama `updatePlayer` ou
+  `createPlayer` conforme o caso.
+- **Inativar saiu do "check" e foi para o cadastro:** removido o botão de toggle (✅/⭕) do card.
+  A ação Inativar/Reativar agora vive dentro do formulário de edição, com **confirmação** antes de
+  inativar (passo "Inativar Fulano? … Cancelar / Confirmar"), seguindo o Padrão de Confirmação da spec.
+  Reativar continua imediato (não é destrutivo). Card mostra apenas um badge "Inativo".
+
+### Bug 3 — Adicionar/remover jogador no roster da pelada
+
+`src/ui/screens/PeladaScreen/PeladaScreen.tsx`: o accordion Roster ganhou botão
+"+ Adicionar jogador" que abre um `BottomSheet` listando os peladeiros ativos ainda fora do roster
+(adiciona usando o `default_type` do jogador). Cada item do roster ganhou ✕ para remover.
+Passou a usar o `profileId` que já era recebido por prop mas estava sem uso.
+
+### Bug 4 — Sorteio de times: `No teams defined for this pelada`
+
+**Causa raiz (estrutural, alinhada à spec):** a pelada precisa dos **nomes dos times** (um por linha),
+e é isso que determina a quantidade de times. O formulário só capturava "jogadores por time" e
+**nunca criava os times**, então `DrawTeamsUseCase` lançava `No teams defined for this pelada`.
+
+**Correção:**
+- `src/application/use-cases/pelada/CreatePeladaUseCase.ts` — recebe `teamNames: string[]`, valida
+  mínimo de 2, normaliza (trim + descarta linhas vazias) e persiste os times com `sort_order`.
+- `src/application/use-cases/pelada/ClonePeladaUseCase.ts` — copia os nomes dos times para a pelada
+  clonada (campo clonável conforme spec).
+- `src/composition-root.ts` — injeta `peladaTeamRepo` em `createPelada` e `clonePelada`.
+- `src/ui/screens/PeladasScreen/PeladasScreen.tsx` — novo campo `Textarea` "Nomes dos times
+  (um por linha)" (default `Time A / Time B`); o submit faz split por linha e passa o array.
+
+### Verificação
+
+- `tsc --noEmit` limpo.
+- Suíte: 368 passando; as **3 falhas restantes são todas em `NeonSqlExecutor.test.ts`** e já falhavam
+  na árvore limpa (confirmado via `git stash`) — exatamente o pendente nº 2 abaixo.
+
+### Ponto de atenção aberto (não tratado aqui)
+
+`AddToRosterUseCase` limita a capacidade por `players_per_team` + `max_goalkeepers`, mas a spec define
+a capacidade total como **nº de times × jogadores por time**. Ajuste pendente, fora do escopo destes bugs.
+
+---
+
 ## Pendências / pontos de atenção
 
 - **Permissão do `pelada_app` no Neon:** o usuário de produção não pode criar tabelas. O `npm run migration:up` só vai funcionar com uma connection string de um usuário com permissão de DDL (ex: `neondb_owner`). Para novas migrations, rodar manualmente no SQL Editor do Neon ou resolver a permissão com `GRANT CREATE ON SCHEMA public TO pelada_app`.

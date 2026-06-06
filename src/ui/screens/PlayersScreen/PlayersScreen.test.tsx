@@ -163,13 +163,53 @@ describe('PlayersScreen', () => {
     });
   });
 
-  it('toggles player status when button clicked', async () => {
-    mockListPlayers.mockResolvedValueOnce([mockPlayers[0]]);
+  it('opens edit sheet pre-filled when edit button clicked', async () => {
     render(<PlayersScreen profileId="prof-1" />);
-    const statusButtons = await screen.findAllByRole('button', { name: /Toggle.*status/ });
-    await userEvent.click(statusButtons[0]);
+    const editButton = await screen.findByRole('button', { name: 'Editar João Silva' });
+    await userEvent.click(editButton);
     await waitFor(() => {
-      expect(mockDeactivatePlayer).toHaveBeenCalledWith(mockPlayers[0].id);
+      expect(screen.getByText('Editar jogador')).toBeInTheDocument();
+    });
+    expect(screen.getByDisplayValue('João Silva')).toBeInTheDocument();
+  });
+
+  it('updates player on edit form submit', async () => {
+    const mockUpdatePlayer = vi.fn().mockResolvedValue(mockPlayers[0]);
+    (AppContextModule.useApp as ReturnType<typeof vi.fn>).mockReturnValue({
+      listPlayers: { execute: mockListPlayers },
+      createPlayer: { execute: mockCreatePlayer },
+      updatePlayer: { execute: mockUpdatePlayer },
+      deactivatePlayer: { execute: mockDeactivatePlayer },
+      reactivatePlayer: { execute: mockReactivatePlayer },
+    });
+    render(<PlayersScreen profileId="prof-1" />);
+    const editButton = await screen.findByRole('button', { name: 'Editar João Silva' });
+    await userEvent.click(editButton);
+
+    const submitButton = screen.getByRole('button', { name: 'Salvar' });
+    await userEvent.click(submitButton);
+
+    await waitFor(() => {
+      expect(mockUpdatePlayer).toHaveBeenCalledWith('pl1', expect.objectContaining({ name: 'João Silva' }));
+    });
+  });
+
+  it('inactivates player from inside the edit sheet after confirmation', async () => {
+    render(<PlayersScreen profileId="prof-1" />);
+    const editButton = await screen.findByRole('button', { name: 'Editar João Silva' });
+    await userEvent.click(editButton);
+
+    const inactivateButton = await screen.findByRole('button', { name: 'Inativar jogador' });
+    await userEvent.click(inactivateButton);
+
+    // First click only reveals the confirmation step — no call yet.
+    expect(mockDeactivatePlayer).not.toHaveBeenCalled();
+
+    const confirmButton = await screen.findByRole('button', { name: 'Confirmar' });
+    await userEvent.click(confirmButton);
+
+    await waitFor(() => {
+      expect(mockDeactivatePlayer).toHaveBeenCalledWith('pl1');
     });
   });
 });
