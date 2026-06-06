@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import type { PeladaRecord } from '@ports/repositories/PeladaRepository';
 import type { PeladaPlayerRecord } from '@ports/repositories/PeladaPlayerRepository';
 import type { DrawResult } from '@application/use-cases/draw/GetDrawUseCase';
@@ -125,6 +126,43 @@ describe('PeladaScreen', () => {
     render(<PeladaScreen profileId="prof-1" peladaId="p1" />);
     await waitFor(() => {
       expect(screen.getByText('Pelada não encontrada')).toBeInTheDocument();
+    });
+  });
+
+  describe('Payments tab goalkeeper_pays filter', () => {
+    const openPaymentsAccordion = async () => {
+      const paymentsButton = screen.getByRole('button', { name: /Pagamentos/i });
+      await userEvent.click(paymentsButton);
+    };
+
+    it('hides goalkeeper from payments when goalkeeper_pays is false', async () => {
+      // mockPelada already has goalkeeper_pays: false
+      render(<PeladaScreen profileId="prof-1" peladaId="p1" />);
+      await waitFor(() => {
+        expect(screen.queryByText('Carregando...')).not.toBeInTheDocument();
+      });
+      await openPaymentsAccordion();
+
+      // Maria is the goalkeeper (pl2, slot_type: 'goalkeeper'); she should not appear
+      const mariaPayLabel = screen.queryByLabelText('Marcar Maria como pago');
+      expect(mariaPayLabel).not.toBeInTheDocument();
+
+      // Line players (João, Pedro) should still appear
+      expect(screen.getByLabelText('Marcar João como pago')).toBeInTheDocument();
+      expect(screen.getByLabelText('Marcar Pedro como pago')).toBeInTheDocument();
+    });
+
+    it('shows goalkeeper in payments when goalkeeper_pays is true', async () => {
+      mockGetPelada.mockResolvedValue({ ...mockPelada, goalkeeper_pays: true });
+      render(<PeladaScreen profileId="prof-1" peladaId="p1" />);
+      await waitFor(() => {
+        expect(screen.queryByText('Carregando...')).not.toBeInTheDocument();
+      });
+      await openPaymentsAccordion();
+
+      expect(screen.getByLabelText('Marcar Maria como pago')).toBeInTheDocument();
+      expect(screen.getByLabelText('Marcar João como pago')).toBeInTheDocument();
+      expect(screen.getByLabelText('Marcar Pedro como pago')).toBeInTheDocument();
     });
   });
 });

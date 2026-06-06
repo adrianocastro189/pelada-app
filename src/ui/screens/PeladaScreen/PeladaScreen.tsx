@@ -359,34 +359,41 @@ export function PeladaScreen({ profileId, peladaId, onBack }: PeladaScreenProps)
         </Accordion>
 
         {/* Payments Accordion */}
-        <Accordion title="Pagamentos" icon="💰">
-          {roster.length === 0 ? (
-            <p className="accordion-empty">Nenhum jogador adicionado</p>
-          ) : (
-            <div className="accordion-content">
-              <div className="payment-table">
-                {roster.map(entry => (
-                  <div key={entry.id} className="payment-row">
-                    <span className="payment-name">
-                      {players.get(entry.player_id)?.name || entry.player_id}
-                    </span>
-                    <label className="payment-checkbox">
-                      <input
-                        type="checkbox"
-                        checked={entry.paid}
-                        onChange={e =>
-                          handleSetPlayerPaid(entry.id, entry.player_id, e.target.checked)
-                        }
-                        aria-label={`Marcar ${players.get(entry.player_id)?.name} como pago`}
-                      />
-                      <span className="payment-status">{entry.paid ? '✅' : '❌'}</span>
-                    </label>
+        {(() => {
+          const paymentRoster = roster.filter(
+            e => e.slot_type !== 'goalkeeper' || pelada.goalkeeper_pays,
+          );
+          return (
+            <Accordion title="Pagamentos" icon="💰">
+              {paymentRoster.length === 0 ? (
+                <p className="accordion-empty">Nenhum jogador adicionado</p>
+              ) : (
+                <div className="accordion-content">
+                  <div className="payment-table">
+                    {paymentRoster.map(entry => (
+                      <div key={entry.id} className="payment-row">
+                        <span className="payment-name">
+                          {players.get(entry.player_id)?.name || entry.player_id}
+                        </span>
+                        <label className="payment-checkbox">
+                          <input
+                            type="checkbox"
+                            checked={entry.paid}
+                            onChange={e =>
+                              handleSetPlayerPaid(entry.id, entry.player_id, e.target.checked)
+                            }
+                            aria-label={`Marcar ${players.get(entry.player_id)?.name} como pago`}
+                          />
+                          <span className="payment-status">{entry.paid ? '✅' : '❌'}</span>
+                        </label>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </Accordion>
+                </div>
+              )}
+            </Accordion>
+          );
+        })()}
 
         {/* Messages Accordion */}
         <Accordion title="Mensagens" icon="💬">
