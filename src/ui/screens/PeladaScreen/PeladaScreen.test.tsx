@@ -6,6 +6,7 @@ import type { PeladaPlayerRecord } from '@ports/repositories/PeladaPlayerReposit
 import type { DrawResult } from '@application/use-cases/draw/GetDrawUseCase';
 import type { PlayerRecord } from '@ports/repositories/PlayerRepository';
 import { PeladaScreen } from './PeladaScreen';
+import type { ClonePeladaFormData } from '@ui/screens/PeladasScreen';
 import * as AppContextModule from '@ui/AppContext';
 
 vi.mock('@ui/AppContext', async () => {
@@ -126,6 +127,47 @@ describe('PeladaScreen', () => {
     render(<PeladaScreen profileId="prof-1" peladaId="p1" />);
     await waitFor(() => {
       expect(screen.getByText('Pelada não encontrada')).toBeInTheDocument();
+    });
+  });
+
+  describe('clone button', () => {
+    it('renders clone button when onClone prop is provided', async () => {
+      const onClone = vi.fn();
+      render(<PeladaScreen profileId="prof-1" peladaId="p1" onClone={onClone} />);
+      await waitFor(() => {
+        expect(screen.queryByText('Carregando...')).not.toBeInTheDocument();
+      });
+      expect(screen.getByRole('button', { name: 'Clonar pelada' })).toBeInTheDocument();
+    });
+
+    it('does not render clone button when onClone prop is absent', async () => {
+      render(<PeladaScreen profileId="prof-1" peladaId="p1" />);
+      await waitFor(() => {
+        expect(screen.queryByText('Carregando...')).not.toBeInTheDocument();
+      });
+      expect(screen.queryByRole('button', { name: 'Clonar pelada' })).not.toBeInTheDocument();
+    });
+
+    it('calls onClone with pelada data and team names when clicked', async () => {
+      const onClone = vi.fn();
+      render(<PeladaScreen profileId="prof-1" peladaId="p1" onClone={onClone} />);
+      await waitFor(() => {
+        expect(screen.queryByText('Carregando...')).not.toBeInTheDocument();
+      });
+
+      await userEvent.click(screen.getByRole('button', { name: 'Clonar pelada' }));
+
+      expect(onClone).toHaveBeenCalledOnce();
+      const payload: ClonePeladaFormData = onClone.mock.calls[0][0];
+      expect(payload.time).toBe(mockPelada.time);
+      expect(payload.location).toBe(mockPelada.location);
+      expect(payload.players_per_team).toBe(mockPelada.players_per_team);
+      expect(payload.max_goalkeepers).toBe(mockPelada.max_goalkeepers);
+      expect(payload.cost_per_player).toBe(mockPelada.cost_per_player);
+      expect(payload.goalkeeper_pays).toBe(mockPelada.goalkeeper_pays);
+      // team names from draw
+      expect(payload.team_names).toContain('Time A');
+      expect(payload.team_names).toContain('Time B');
     });
   });
 

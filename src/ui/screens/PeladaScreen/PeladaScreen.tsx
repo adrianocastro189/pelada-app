@@ -14,19 +14,21 @@ import type { PeladaRecord } from '@ports/repositories/PeladaRepository';
 import type { PeladaPlayerRecord } from '@ports/repositories/PeladaPlayerRepository';
 import type { DrawResult } from '@application/use-cases/draw/GetDrawUseCase';
 import type { PlayerRecord } from '@ports/repositories/PlayerRepository';
+import type { ClonePeladaFormData } from '@ui/screens/PeladasScreen';
 import './PeladaScreen.css';
 
 interface PeladaScreenProps {
   profileId: string;
   peladaId: string;
   onBack?: () => void;
+  onClone?: (data: ClonePeladaFormData) => void;
 }
 
 /**
  * Screen for viewing and managing a single pelada (match).
  * Displays pelada info, roster, draw, and payments in accordions.
  */
-export function PeladaScreen({ profileId, peladaId, onBack }: PeladaScreenProps): JSX.Element {
+export function PeladaScreen({ profileId, peladaId, onBack, onClone }: PeladaScreenProps): JSX.Element {
   const app = useApp();
   const [pelada, setPelada] = useState<PeladaRecord | null>(null);
   const [profile, setProfile] = useState<ProfileRecord | null>(null);
@@ -124,6 +126,19 @@ export function PeladaScreen({ profileId, peladaId, onBack }: PeladaScreenProps)
     }
   };
 
+  const handleClone = () => {
+    if (!pelada) return;
+    onClone?.({
+      time: pelada.time ?? '',
+      location: pelada.location ?? '',
+      team_names: draw.map(d => d.team.name).join('\n'),
+      players_per_team: pelada.players_per_team,
+      max_goalkeepers: pelada.max_goalkeepers,
+      cost_per_player: pelada.cost_per_player,
+      goalkeeper_pays: pelada.goalkeeper_pays,
+    });
+  };
+
   const handleSetPlayerPaid = async (rosterEntryId: string, playerId: string, paid: boolean) => {
     try {
       await app.setPlayerPaid.execute(peladaId, playerId, paid);
@@ -202,15 +217,27 @@ export function PeladaScreen({ profileId, peladaId, onBack }: PeladaScreenProps)
   return (
     <div className="pelada-screen">
       <header className="pelada-header">
-        {onBack && (
-          <button
-            className="pelada-back-button"
-            onClick={onBack}
-            aria-label="Voltar"
-          >
-            ← Voltar
-          </button>
-        )}
+        <div className="pelada-header-nav">
+          {onBack && (
+            <button
+              className="pelada-back-button"
+              onClick={onBack}
+              aria-label="Voltar"
+            >
+              ← Voltar
+            </button>
+          )}
+          {onClone && (
+            <button
+              className="pelada-clone-button"
+              onClick={handleClone}
+              aria-label="Clonar pelada"
+              title="Criar nova pelada com os mesmos dados"
+            >
+              Clonar
+            </button>
+          )}
+        </div>
         <h1>⚽ {formatDate(pelada.date)}</h1>
         {pelada.time && <p className="pelada-time">🕐 {pelada.time}</p>}
         {pelada.location && <p className="pelada-location">📍 {pelada.location}</p>}

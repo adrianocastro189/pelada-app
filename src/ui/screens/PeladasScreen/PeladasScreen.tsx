@@ -4,13 +4,25 @@ import { useApp } from '@ui/AppContext';
 import type { PeladaRecord } from '@ports/repositories/PeladaRepository';
 import './PeladasScreen.css';
 
+/** Fields from a pelada that can be pre-filled when creating a clone. Date is excluded — the user must enter it. */
+export interface ClonePeladaFormData {
+  time: string;
+  location: string;
+  team_names: string;
+  players_per_team: number;
+  max_goalkeepers: number;
+  cost_per_player: number;
+  goalkeeper_pays: boolean;
+}
+
 interface PeladasScreenProps {
   profileId: string;
   onSelectPelada?: (peladaId: string) => void;
+  cloneData?: ClonePeladaFormData | null;
 }
 
 const emptyForm = {
-  date: new Date().toISOString().split('T')[0],
+  date: '',
   time: '',
   location: '',
   team_names: 'Time A\nTime B',
@@ -24,13 +36,20 @@ const emptyForm = {
  * Screen for listing and managing peladas (matches) in a profile.
  * Lists all peladas and allows creation/deletion.
  */
-export function PeladasScreen({ profileId, onSelectPelada }: PeladasScreenProps): JSX.Element {
+export function PeladasScreen({ profileId, onSelectPelada, cloneData }: PeladasScreenProps): JSX.Element {
   const app = useApp();
   const [peladas, setPeladas] = useState<PeladaRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [showCreateSheet, setShowCreateSheet] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [formData, setFormData] = useState({ ...emptyForm });
+
+  // Pre-fill the create form and open it when clone data is supplied (e.g. "Clone" button in PeladaScreen).
+  useEffect(() => {
+    if (!cloneData) return;
+    setFormData({ date: '', ...cloneData });
+    setShowCreateSheet(true);
+  }, [cloneData]);
 
   // Load peladas on mount and when profileId changes
   useEffect(() => {
@@ -153,7 +172,10 @@ export function PeladasScreen({ profileId, onSelectPelada }: PeladasScreenProps)
         <Button
           variant="secondary"
           fullWidth
-          onClick={() => setShowCreateSheet(true)}
+          onClick={() => {
+            setFormData({ ...emptyForm, date: new Date().toISOString().split('T')[0] });
+            setShowCreateSheet(true);
+          }}
           className="peladas-create-button"
         >
           + Criar nova pelada
@@ -161,7 +183,10 @@ export function PeladasScreen({ profileId, onSelectPelada }: PeladasScreenProps)
       </main>
 
       <FAB
-        onClick={() => setShowCreateSheet(true)}
+        onClick={() => {
+          setFormData({ ...emptyForm, date: new Date().toISOString().split('T')[0] });
+          setShowCreateSheet(true);
+        }}
         label="Criar nova pelada"
         icon="+"
       />
@@ -171,7 +196,7 @@ export function PeladasScreen({ profileId, onSelectPelada }: PeladasScreenProps)
         open={showCreateSheet}
         onClose={() => {
           setShowCreateSheet(false);
-          setFormData({ ...emptyForm });
+          setFormData({ ...emptyForm, date: new Date().toISOString().split('T')[0] });
         }}
         title="Nova pelada"
       >

@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { PeladaRecord } from '@ports/repositories/PeladaRepository';
 import { PeladasScreen } from './PeladasScreen';
+import type { ClonePeladaFormData } from './PeladasScreen';
 import * as AppContextModule from '@ui/AppContext';
 
 vi.mock('@ui/AppContext', async () => {
@@ -165,6 +166,41 @@ describe('PeladasScreen', () => {
 
     await waitFor(() => {
       expect(mockDeletePelada).toHaveBeenCalledWith(mockPeladas[0].id);
+    });
+  });
+
+  describe('clone pre-fill', () => {
+    const cloneData: ClonePeladaFormData = {
+      time: '09:00',
+      location: 'Campo do Zé',
+      team_names: 'Azul\nVermelho\nVerde',
+      players_per_team: 6,
+      max_goalkeepers: 2,
+      cost_per_player: 1400,
+      goalkeeper_pays: true,
+    };
+
+    it('opens the create sheet when cloneData is provided', async () => {
+      render(<PeladasScreen profileId="prof-1" cloneData={cloneData} />);
+      await waitFor(() => {
+        expect(screen.getByText('Nova pelada')).toBeInTheDocument();
+      });
+    });
+
+    it('pre-fills the form with clone data and leaves date empty', async () => {
+      render(<PeladasScreen profileId="prof-1" cloneData={cloneData} />);
+      await waitFor(() => {
+        expect(screen.getByText('Nova pelada')).toBeInTheDocument();
+      });
+
+      const timeInput = screen.getByLabelText('Hora (opcional)') as HTMLInputElement;
+      expect(timeInput.value).toBe('09:00');
+
+      const locationInput = screen.getByLabelText('Local (opcional)') as HTMLInputElement;
+      expect(locationInput.value).toBe('Campo do Zé');
+
+      const dateInput = screen.getByLabelText('Data') as HTMLInputElement;
+      expect(dateInput.value).toBe('');
     });
   });
 });
