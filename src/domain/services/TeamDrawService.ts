@@ -33,7 +33,8 @@ export class TeamDrawService {
    *
    * Algorithm:
    *  1. Goalkeepers are drawn separately (one per team) only when their count equals
-   *     the number of teams; otherwise they are treated as line players.
+   *     the number of teams; otherwise they are excluded from the draw entirely (they
+   *     never appear in the result — manual decision on the field).
    *  2. Line players are shuffled (random), then stable-sorted by stars DESC so that
    *     players within the same star tier remain in random relative order.
    *  3. Players are assigned to teams with a greedy "lowest score first" rule driven
@@ -60,8 +61,11 @@ export class TeamDrawService {
     const goalkeepers = players.filter(p => p.slotType === 'goalkeeper')
     const linePlayers = players.filter(p => p.slotType === 'line')
 
+    // Goalkeepers are drawn (one per team) only when their count equals the number
+    // of teams. Otherwise they are left out of the draw entirely (manual decision on
+    // the field) — never mixed into the line draft.
     const drawGoaliesSeparately = goalkeepers.length === teamCount
-    const draft = drawGoaliesSeparately ? linePlayers : [...linePlayers, ...goalkeepers]
+    const draft = linePlayers
 
     // Shuffle introduces per-tier randomness; stable-sort then orders by stars DESC.
     const sorted = this.sortByBalance(random.shuffle(draft))

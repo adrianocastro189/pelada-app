@@ -54,13 +54,14 @@ describe('TeamDrawService', () => {
     })
   })
 
-  it('treats goalkeepers as line players when count does not match teamCount', () => {
+  it('excludes goalkeepers from the draw when count does not match teamCount', () => {
     const gk = makeGoalkeeper('gk0', 5.0)
     const linePlayers = Array.from({ length: 4 }, (_, i) => makeLine(`p${i}`, 3.0))
     const result = service.draw([gk, ...linePlayers], { teamCount: 3 }, new SeededRandomSource(1), strategy)
     const allIds = result.flatMap(t => t.playerIds)
-    expect(allIds).toContain('gk0')
-    expect(allIds).toHaveLength(5)
+    // Goalkeeper is left out entirely (manual decision on the field).
+    expect(allIds).not.toContain('gk0')
+    expect(allIds).toHaveLength(4)
   })
 
   it('balances teams by total stars when possible', () => {
