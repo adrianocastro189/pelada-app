@@ -44,7 +44,7 @@ export function FinancialScreen({ profileId }: FinancialScreenProps): JSX.Elemen
       try {
         const [recordsData, balancesData, suggestionsData] = await Promise.all([
           app.listFinancialRecords.execute(profileId),
-          app.getBalances.execute(profileId, selectedYear, selectedMonth),
+          app.getBalances.execute(profileId, selectedYear, selectedMonth - 1),
           app.getDescriptionSuggestions.execute(profileId, ''),
         ]);
         setRecords(recordsData);
@@ -77,7 +77,7 @@ export function FinancialScreen({ profileId }: FinancialScreenProps): JSX.Elemen
       setShowCreateSheet(false);
       const [recordsData, balancesData, suggestionsData] = await Promise.all([
         app.listFinancialRecords.execute(profileId),
-        app.getBalances.execute(profileId, selectedYear, selectedMonth),
+        app.getBalances.execute(profileId, selectedYear, selectedMonth - 1),
         app.getDescriptionSuggestions.execute(profileId, ''),
       ]);
       setRecords(recordsData);
@@ -95,7 +95,7 @@ export function FinancialScreen({ profileId }: FinancialScreenProps): JSX.Elemen
       // Reload records and refresh suggestions (a deletion may remove a unique description)
       const [recordsData, balancesData, suggestionsData] = await Promise.all([
         app.listFinancialRecords.execute(profileId),
-        app.getBalances.execute(profileId, selectedYear, selectedMonth),
+        app.getBalances.execute(profileId, selectedYear, selectedMonth - 1),
         app.getDescriptionSuggestions.execute(profileId, ''),
       ]);
       setRecords(recordsData);

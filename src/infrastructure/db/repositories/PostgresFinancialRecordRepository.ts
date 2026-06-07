@@ -1,6 +1,20 @@
 import { FinancialRecordRepository, FinancialRecordRecord, CreateFinancialRecordInput, UpdateFinancialRecordInput } from '@ports/repositories/FinancialRecordRepository';
 import { SqlExecutor } from '@ports/SqlExecutor';
 
+/**
+ * Normalises a raw Postgres row into a FinancialRecordRecord.
+ * BIGINT columns (value) are returned by the Neon driver as strings;
+ * we cast them to numbers here so balance arithmetic works correctly.
+ */
+function normalizeRow(r: FinancialRecordRecord): FinancialRecordRecord {
+  return {
+    ...r,
+    date: new Date(r.date),
+    created_at: new Date(r.created_at),
+    value: Number(r.value),
+  };
+}
+
 export class PostgresFinancialRecordRepository implements FinancialRecordRepository {
   constructor(private sqlExecutor: SqlExecutor) {}
 
@@ -19,7 +33,7 @@ export class PostgresFinancialRecordRepository implements FinancialRecordReposit
     ]);
     const row = result.rows[0];
     if (!row) throw new Error('Failed to insert financial record');
-    return { ...row, date: new Date(row.date), created_at: new Date(row.created_at) };
+    return normalizeRow(row);
   }
 
   async delete(id: string): Promise<boolean> {
@@ -32,8 +46,7 @@ export class PostgresFinancialRecordRepository implements FinancialRecordReposit
     const sql = 'SELECT id, profile_id, date, description, value, type, created_at FROM financial_records WHERE id = $1';
     const result = await this.sqlExecutor.query<FinancialRecordRecord>(sql, [id]);
     if (result.rows.length === 0) return null;
-    const row = result.rows[0];
-    return { ...row, date: new Date(row.date), created_at: new Date(row.created_at) };
+    return normalizeRow(result.rows[0]);
   }
 
   async listByProfileId(profileId: string): Promise<FinancialRecordRecord[]> {
@@ -42,7 +55,7 @@ export class PostgresFinancialRecordRepository implements FinancialRecordReposit
       FROM financial_records WHERE profile_id = $1 ORDER BY date DESC
     `;
     const result = await this.sqlExecutor.query<FinancialRecordRecord>(sql, [profileId]);
-    return result.rows.map((r) => ({ ...r, date: new Date(r.date), created_at: new Date(r.created_at) }));
+    return result.rows.map(normalizeRow);
   }
 
   async listByProfileIdAndDateRange(profileId: string, startDate: Date, endDate: Date): Promise<FinancialRecordRecord[]> {
@@ -51,7 +64,7 @@ export class PostgresFinancialRecordRepository implements FinancialRecordReposit
       FROM financial_records WHERE profile_id = $1 AND date >= $2 AND date <= $3 ORDER BY date DESC
     `;
     const result = await this.sqlExecutor.query<FinancialRecordRecord>(sql, [profileId, startDate, endDate]);
-    return result.rows.map((r) => ({ ...r, date: new Date(r.date), created_at: new Date(r.created_at) }));
+    return result.rows.map(normalizeRow);
   }
 
   async update(id: string, data: UpdateFinancialRecordInput): Promise<FinancialRecordRecord | null> {
@@ -87,7 +100,6 @@ export class PostgresFinancialRecordRepository implements FinancialRecordReposit
 
     const result = await this.sqlExecutor.query<FinancialRecordRecord>(sql, values);
     if (result.rows.length === 0) return null;
-    const row = result.rows[0];
-    return { ...row, date: new Date(row.date), created_at: new Date(row.created_at) };
+    return normalizeRow(result.rows[0]);
   }
 }
