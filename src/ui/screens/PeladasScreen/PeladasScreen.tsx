@@ -4,6 +4,12 @@ import { useApp } from '@ui/AppContext';
 import type { PeladaRecord } from '@ports/repositories/PeladaRepository';
 import './PeladasScreen.css';
 
+/** Parses a 'YYYY-MM-DD' string as a local-timezone Date (avoids UTC midnight → previous-day shift). */
+const parseLocalDate = (dateStr: string): Date => {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
+
 /** Fields from a pelada that can be pre-filled when creating a clone. Date is excluded — the user must enter it. */
 export interface ClonePeladaFormData {
   time: string;
@@ -28,7 +34,8 @@ const emptyForm = {
   team_names: 'Time A\nTime B',
   players_per_team: 5,
   max_goalkeepers: 1,
-  cost_per_player: 0,
+  /** Display string in R$ (e.g. "14.50"); converted to cents on submit. */
+  cost_per_player: '',
   goalkeeper_pays: false,
 };
 
@@ -46,7 +53,16 @@ export function PeladasScreen({ profileId, onSelectPelada, cloneData }: PeladasS
   // Pre-fill the create form and open it when clone data is supplied (e.g. "Clone" button in PeladaScreen).
   useEffect(() => {
     if (!cloneData) return;
-    setFormData({ date: '', ...cloneData });
+    setFormData({
+      date: '',
+      time: cloneData.time,
+      location: cloneData.location,
+      team_names: cloneData.team_names,
+      players_per_team: cloneData.players_per_team,
+      max_goalkeepers: cloneData.max_goalkeepers,
+      cost_per_player: (cloneData.cost_per_player / 100).toFixed(2),
+      goalkeeper_pays: cloneData.goalkeeper_pays,
+    });
     setShowCreateSheet(true);
   }, [cloneData]);
 
@@ -75,12 +91,12 @@ export function PeladasScreen({ profileId, onSelectPelada, cloneData }: PeladasS
       await app.createPelada.execute(
         profileId,
         {
-          date: new Date(formData.date),
+          date: parseLocalDate(formData.date),
           time: formData.time || null,
           location: formData.location || null,
           players_per_team: formData.players_per_team,
           max_goalkeepers: formData.max_goalkeepers,
-          cost_per_player: formData.cost_per_player,
+          cost_per_player: Math.round(parseFloat(formData.cost_per_player || '0') * 100),
           goalkeeper_pays: formData.goalkeeper_pays,
         },
         teamNames,
@@ -230,12 +246,13 @@ export function PeladasScreen({ profileId, onSelectPelada, cloneData }: PeladasS
             />
           </div>
           <Input
-            label="Custo por jogador (centavos)"
+            label="Custo por jogador (R$)"
             type="number"
             min="0"
-            step="100"
+            step="0.01"
+            placeholder="0.00"
             value={formData.cost_per_player}
-            onChange={e => setFormData({ ...formData, cost_per_player: parseInt(e.target.value) })}
+            onChange={e => setFormData({ ...formData, cost_per_player: e.target.value })}
           />
           <label className="peladas-checkbox">
             <input

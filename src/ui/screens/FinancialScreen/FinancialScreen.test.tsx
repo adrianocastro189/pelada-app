@@ -46,18 +46,21 @@ describe('FinancialScreen', () => {
   let mockGetBalances: ReturnType<typeof vi.fn>;
   let mockCreateRecord: ReturnType<typeof vi.fn>;
   let mockDeleteRecord: ReturnType<typeof vi.fn>;
+  let mockGetSuggestions: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     mockListRecords = vi.fn().mockResolvedValue(mockRecords);
     mockGetBalances = vi.fn().mockResolvedValue(mockBalances);
     mockCreateRecord = vi.fn().mockResolvedValue({ ...mockRecords[0], id: 'fr3' });
     mockDeleteRecord = vi.fn().mockResolvedValue(undefined);
+    mockGetSuggestions = vi.fn().mockResolvedValue([]);
 
     (AppContextModule.useApp as ReturnType<typeof vi.fn>).mockReturnValue({
       listFinancialRecords: { execute: mockListRecords },
       getBalances: { execute: mockGetBalances },
       createFinancialRecord: { execute: mockCreateRecord },
       deleteFinancialRecord: { execute: mockDeleteRecord },
+      getDescriptionSuggestions: { execute: mockGetSuggestions },
     });
   });
 
@@ -163,6 +166,41 @@ describe('FinancialScreen', () => {
     await userEvent.click(confirmButton);
     await waitFor(() => {
       expect(mockDeleteRecord).toHaveBeenCalled();
+    });
+  });
+
+  describe('description autocomplete', () => {
+    it('fetches description suggestions on mount', async () => {
+      render(<FinancialScreen profileId="prof-1" />);
+      await waitFor(() => {
+        expect(mockGetSuggestions).toHaveBeenCalledWith('prof-1', '');
+      });
+    });
+
+    it('renders datalist with suggestions when they exist', async () => {
+      mockGetSuggestions.mockResolvedValue(['Venda de uniforme', 'Aluguel quadra']);
+      render(<FinancialScreen profileId="prof-1" />);
+
+      // Open the create sheet
+      const button = await screen.findByText('+ Novo Registro');
+      await userEvent.click(button);
+
+      await waitFor(() => {
+        // datalist element should exist
+        expect(document.getElementById('financial-description-suggestions')).toBeInTheDocument();
+        // description input should be linked to the datalist
+        const descInput = screen.getByLabelText('Descrição *');
+        expect(descInput).toHaveAttribute('list', 'financial-description-suggestions');
+      });
+    });
+
+    it('does not render datalist when no suggestions', async () => {
+      mockGetSuggestions.mockResolvedValue([]);
+      render(<FinancialScreen profileId="prof-1" />);
+      const button = await screen.findByText('+ Novo Registro');
+      await userEvent.click(button);
+      await waitFor(() => expect(screen.getByText('Novo Registro Financeiro')).toBeInTheDocument());
+      expect(document.getElementById('financial-description-suggestions')).not.toBeInTheDocument();
     });
   });
 });

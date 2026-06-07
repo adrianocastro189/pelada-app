@@ -5,6 +5,12 @@ import type { FinancialRecordRecord } from '@ports/repositories/FinancialRecordR
 import type { BalancesResult } from '@application/use-cases/financial/GetBalancesUseCase';
 import './FinancialScreen.css';
 
+/** Parses a 'YYYY-MM-DD' string as a local-timezone Date (avoids UTC midnight → previous-day shift). */
+const parseLocalDate = (dateStr: string): Date => {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
+
 interface FinancialScreenProps {
   profileId: string;
 }
@@ -22,24 +28,28 @@ export function FinancialScreen({ profileId }: FinancialScreenProps): JSX.Elemen
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
     description: '',
-    value: 0,
+    /** Display string in R$ typed by the user (e.g. "4.01"); converted to cents only on submit. */
+    valueDisplay: '',
     type: 'credit' as 'credit' | 'debit',
   });
 
-  // Load records and balances on mount and when month/year change
+  // Load records, balances and description suggestions on mount and when month/year change
   useEffect(() => {
     const loadFinancialData = async () => {
       setLoading(true);
       try {
-        const [recordsData, balancesData] = await Promise.all([
+        const [recordsData, balancesData, suggestionsData] = await Promise.all([
           app.listFinancialRecords.execute(profileId),
           app.getBalances.execute(profileId, selectedYear, selectedMonth),
+          app.getDescriptionSuggestions.execute(profileId, ''),
         ]);
         setRecords(recordsData);
         setBalances(balancesData);
+        setSuggestions(suggestionsData);
       } finally {
         setLoading(false);
       }
@@ -48,28 +58,31 @@ export function FinancialScreen({ profileId }: FinancialScreenProps): JSX.Elemen
   }, [profileId, selectedMonth, selectedYear, app]);
 
   const handleCreateRecord = async () => {
-    if (!formData.description.trim() || formData.value <= 0) return;
+    const valueCents = Math.round(parseFloat(formData.valueDisplay || '0') * 100);
+    if (!formData.description.trim() || valueCents <= 0) return;
     try {
       await app.createFinancialRecord.execute(profileId, {
-        date: new Date(formData.date),
+        date: parseLocalDate(formData.date),
         description: formData.description.trim(),
-        value: formData.value,
+        value: valueCents,
         type: formData.type,
       });
       // Reset form and reload
       setFormData({
         date: new Date().toISOString().split('T')[0],
         description: '',
-        value: 0,
+        valueDisplay: '',
         type: 'credit',
       });
       setShowCreateSheet(false);
-      const [recordsData, balancesData] = await Promise.all([
+      const [recordsData, balancesData, suggestionsData] = await Promise.all([
         app.listFinancialRecords.execute(profileId),
         app.getBalances.execute(profileId, selectedYear, selectedMonth),
+        app.getDescriptionSuggestions.execute(profileId, ''),
       ]);
       setRecords(recordsData);
       setBalances(balancesData);
+      setSuggestions(suggestionsData);
     } catch (error) {
       console.error('Error creating record:', error);
     }
@@ -79,13 +92,15 @@ export function FinancialScreen({ profileId }: FinancialScreenProps): JSX.Elemen
     try {
       await app.deleteFinancialRecord.execute(recordId);
       setConfirmDeleteId(null);
-      // Reload records
-      const [recordsData, balancesData] = await Promise.all([
+      // Reload records and refresh suggestions (a deletion may remove a unique description)
+      const [recordsData, balancesData, suggestionsData] = await Promise.all([
         app.listFinancialRecords.execute(profileId),
         app.getBalances.execute(profileId, selectedYear, selectedMonth),
+        app.getDescriptionSuggestions.execute(profileId, ''),
       ]);
       setRecords(recordsData);
       setBalances(balancesData);
+      setSuggestions(suggestionsData);
     } catch (error) {
       console.error('Error deleting record:', error);
     }
@@ -214,7 +229,7 @@ export function FinancialScreen({ profileId }: FinancialScreenProps): JSX.Elemen
           setFormData({
             date: new Date().toISOString().split('T')[0],
             description: '',
-            value: 0,
+            valueDisplay: '',
             type: 'credit',
           });
         }}
@@ -232,8 +247,16 @@ export function FinancialScreen({ profileId }: FinancialScreenProps): JSX.Elemen
             placeholder="Ex: Venda de uniforme"
             value={formData.description}
             onChange={e => setFormData({ ...formData, description: e.target.value })}
+            list="financial-description-suggestions"
             required
           />
+          {suggestions.length > 0 && (
+            <datalist id="financial-description-suggestions">
+              {suggestions.map(s => (
+                <option key={s} value={s} />
+              ))}
+            </datalist>
+          )}
 
           <Input
             label="Data *"
@@ -261,8 +284,9 @@ export function FinancialScreen({ profileId }: FinancialScreenProps): JSX.Elemen
                 type="number"
                 min="0"
                 step="0.01"
-                value={(formData.value / 100).toFixed(2)}
-                onChange={e => setFormData({ ...formData, value: Math.round(parseFloat(e.target.value) * 100) })}
+                placeholder="0.00"
+                value={formData.valueDisplay}
+                onChange={e => setFormData({ ...formData, valueDisplay: e.target.value })}
                 className="form-number"
                 required
               />
