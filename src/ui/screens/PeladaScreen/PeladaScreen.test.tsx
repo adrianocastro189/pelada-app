@@ -92,6 +92,7 @@ describe('PeladaScreen', () => {
       getPlayer: { execute: mockGetPlayer },
       drawTeams: { execute: mockDrawTeams },
       setPlayerPaid: { execute: mockSetPlayerPaid },
+      deletePelada: { execute: vi.fn().mockResolvedValue(undefined) },
     });
   });
 
@@ -174,44 +175,98 @@ describe('PeladaScreen', () => {
     });
   });
 
-  describe('clone button', () => {
-    it('renders clone button when onClone prop is provided', async () => {
-      const onClone = vi.fn();
-      render(<PeladaScreen profileId="prof-1" peladaId="p1" onClone={onClone} />);
-      await waitFor(() => {
-        expect(screen.queryByText('Carregando...')).not.toBeInTheDocument();
+  describe('Actions accordion', () => {
+    const openActionsAccordion = async () => {
+      // Use the unique ⚙️ icon to avoid colliding with "Informações" accordion
+      const actionsButton = screen.getByRole('button', { name: /⚙️/ });
+      await userEvent.click(actionsButton);
+    };
+
+    describe('clone button', () => {
+      it('shows clone button inside accordion when onClone prop is provided', async () => {
+        const onClone = vi.fn();
+        render(<PeladaScreen profileId="prof-1" peladaId="p1" onClone={onClone} />);
+        await waitFor(() => expect(screen.queryByText('Carregando...')).not.toBeInTheDocument());
+        await openActionsAccordion();
+        expect(screen.getByRole('button', { name: /Clonar pelada/i })).toBeInTheDocument();
       });
-      expect(screen.getByRole('button', { name: 'Clonar pelada' })).toBeInTheDocument();
+
+      it('hides clone button when onClone prop is absent', async () => {
+        render(<PeladaScreen profileId="prof-1" peladaId="p1" />);
+        await waitFor(() => expect(screen.queryByText('Carregando...')).not.toBeInTheDocument());
+        await openActionsAccordion();
+        expect(screen.queryByRole('button', { name: /Clonar pelada/i })).not.toBeInTheDocument();
+      });
+
+      it('calls onClone with pelada data and team names when clicked', async () => {
+        const onClone = vi.fn();
+        render(<PeladaScreen profileId="prof-1" peladaId="p1" onClone={onClone} />);
+        await waitFor(() => expect(screen.queryByText('Carregando...')).not.toBeInTheDocument());
+        await openActionsAccordion();
+
+        await userEvent.click(screen.getByRole('button', { name: /Clonar pelada/i }));
+
+        expect(onClone).toHaveBeenCalledOnce();
+        const payload: ClonePeladaFormData = onClone.mock.calls[0][0];
+        expect(payload.time).toBe(mockPelada.time);
+        expect(payload.location).toBe(mockPelada.location);
+        expect(payload.players_per_team).toBe(mockPelada.players_per_team);
+        expect(payload.max_goalkeepers).toBe(mockPelada.max_goalkeepers);
+        expect(payload.cost_per_player).toBe(mockPelada.cost_per_player);
+        expect(payload.goalkeeper_pays).toBe(mockPelada.goalkeeper_pays);
+        expect(payload.team_names).toContain('Time A');
+        expect(payload.team_names).toContain('Time B');
+      });
     });
 
-    it('does not render clone button when onClone prop is absent', async () => {
-      render(<PeladaScreen profileId="prof-1" peladaId="p1" />);
-      await waitFor(() => {
-        expect(screen.queryByText('Carregando...')).not.toBeInTheDocument();
-      });
-      expect(screen.queryByRole('button', { name: 'Clonar pelada' })).not.toBeInTheDocument();
-    });
-
-    it('calls onClone with pelada data and team names when clicked', async () => {
-      const onClone = vi.fn();
-      render(<PeladaScreen profileId="prof-1" peladaId="p1" onClone={onClone} />);
-      await waitFor(() => {
-        expect(screen.queryByText('Carregando...')).not.toBeInTheDocument();
+    describe('delete button', () => {
+      it('shows Apagar button in accordion', async () => {
+        render(<PeladaScreen profileId="prof-1" peladaId="p1" />);
+        await waitFor(() => expect(screen.queryByText('Carregando...')).not.toBeInTheDocument());
+        await openActionsAccordion();
+        expect(screen.getByRole('button', { name: /Apagar pelada/i })).toBeInTheDocument();
       });
 
-      await userEvent.click(screen.getByRole('button', { name: 'Clonar pelada' }));
+      it('opens delete confirmation sheet when Apagar is clicked', async () => {
+        render(<PeladaScreen profileId="prof-1" peladaId="p1" />);
+        await waitFor(() => expect(screen.queryByText('Carregando...')).not.toBeInTheDocument());
+        await openActionsAccordion();
 
-      expect(onClone).toHaveBeenCalledOnce();
-      const payload: ClonePeladaFormData = onClone.mock.calls[0][0];
-      expect(payload.time).toBe(mockPelada.time);
-      expect(payload.location).toBe(mockPelada.location);
-      expect(payload.players_per_team).toBe(mockPelada.players_per_team);
-      expect(payload.max_goalkeepers).toBe(mockPelada.max_goalkeepers);
-      expect(payload.cost_per_player).toBe(mockPelada.cost_per_player);
-      expect(payload.goalkeeper_pays).toBe(mockPelada.goalkeeper_pays);
-      // team names from draw
-      expect(payload.team_names).toContain('Time A');
-      expect(payload.team_names).toContain('Time B');
+        await userEvent.click(screen.getByRole('button', { name: /Apagar pelada/i }));
+
+        await waitFor(() => {
+          expect(screen.getByText('Apagar pelada?')).toBeInTheDocument();
+        });
+      });
+
+      it('calls deletePelada and onDelete when confirmed', async () => {
+        const mockDeletePelada = vi.fn().mockResolvedValue(undefined);
+        const onDelete = vi.fn();
+        (AppContextModule.useApp as ReturnType<typeof vi.fn>).mockReturnValue({
+          getPelada: { execute: mockGetPelada },
+          getProfile: { execute: mockGetProfile },
+          getRoster: { execute: mockGetRoster },
+          getDraw: { execute: mockGetDraw },
+          getPlayer: { execute: mockGetPlayer },
+          drawTeams: { execute: mockDrawTeams },
+          setPlayerPaid: { execute: mockSetPlayerPaid },
+          deletePelada: { execute: mockDeletePelada },
+        });
+
+        render(<PeladaScreen profileId="prof-1" peladaId="p1" onDelete={onDelete} />);
+        await waitFor(() => expect(screen.queryByText('Carregando...')).not.toBeInTheDocument());
+        await openActionsAccordion();
+
+        await userEvent.click(screen.getByRole('button', { name: /Apagar pelada/i }));
+        await waitFor(() => expect(screen.getByText('Apagar pelada?')).toBeInTheDocument());
+
+        await userEvent.click(screen.getByRole('button', { name: 'Apagar' }));
+
+        await waitFor(() => {
+          expect(mockDeletePelada).toHaveBeenCalledWith('p1');
+          expect(onDelete).toHaveBeenCalledOnce();
+        });
+      });
     });
   });
 

@@ -54,7 +54,7 @@ describe('PeladasScreen', () => {
     (AppContextModule.useApp as ReturnType<typeof vi.fn>).mockReturnValue({
       listPeladas: { execute: mockListPeladas },
       createPelada: { execute: mockCreatePelada },
-      deletePelada: { execute: mockDeletePelada },
+      // deletePelada is now handled from inside PeladaScreen, not from the list
     });
   });
 
@@ -131,42 +131,12 @@ describe('PeladasScreen', () => {
     });
   });
 
-  it('displays delete button for each pelada', async () => {
+  it('does not show delete buttons on pelada cards (deletion moved to PeladaScreen)', async () => {
     render(<PeladasScreen profileId="prof-1" />);
     await waitFor(() => {
       expect(screen.queryByText('Carregando...')).not.toBeInTheDocument();
     });
-    const deleteButtons = screen.getAllByLabelText(/Excluir pelada/);
-    expect(deleteButtons.length).toBe(2);
-  });
-
-  it('opens delete confirmation when delete button clicked', async () => {
-    render(<PeladasScreen profileId="prof-1" />);
-    await waitFor(() => {
-      expect(screen.queryByText('Carregando...')).not.toBeInTheDocument();
-    });
-    const deleteButtons = screen.getAllByLabelText(/Excluir pelada/);
-    await userEvent.click(deleteButtons[0]);
-    await waitFor(() => {
-      expect(screen.getByText('Apagar pelada?')).toBeInTheDocument();
-    });
-  });
-
-  it('deletes pelada on confirmation', async () => {
-    render(<PeladasScreen profileId="prof-1" />);
-    await waitFor(() => {
-      expect(screen.queryByText('Carregando...')).not.toBeInTheDocument();
-    });
-
-    const deleteButtons = screen.getAllByLabelText(/Excluir pelada/);
-    await userEvent.click(deleteButtons[0]);
-
-    const confirmButton = screen.getByRole('button', { name: 'Apagar' });
-    await userEvent.click(confirmButton);
-
-    await waitFor(() => {
-      expect(mockDeletePelada).toHaveBeenCalledWith(mockPeladas[0].id);
-    });
+    expect(screen.queryAllByLabelText(/Excluir pelada/).length).toBe(0);
   });
 
   describe('clone pre-fill', () => {

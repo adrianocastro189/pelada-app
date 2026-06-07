@@ -41,7 +41,6 @@ export function PeladasScreen({ profileId, onSelectPelada, cloneData }: PeladasS
   const [peladas, setPeladas] = useState<PeladaRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [showCreateSheet, setShowCreateSheet] = useState(false);
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [formData, setFormData] = useState({ ...emptyForm });
 
   // Pre-fill the create form and open it when clone data is supplied (e.g. "Clone" button in PeladaScreen).
@@ -96,18 +95,6 @@ export function PeladasScreen({ profileId, onSelectPelada, cloneData }: PeladasS
     }
   };
 
-  const handleDeletePelada = async (id: string) => {
-    try {
-      await app.deletePelada.execute(id);
-      setConfirmDeleteId(null);
-      // Reload peladas
-      const result = await app.listPeladas.execute(profileId);
-      setPeladas(result);
-    } catch (error) {
-      console.error('Error deleting pelada:', error);
-    }
-  };
-
   const handleSelectPelada = (peladaId: string) => {
     onSelectPelada?.(peladaId);
   };
@@ -153,16 +140,6 @@ export function PeladasScreen({ profileId, onSelectPelada, cloneData }: PeladasS
                       {pelada.players_per_team} por time · R$ {(pelada.cost_per_player / 100).toFixed(2)}
                     </p>
                   </div>
-                  <button
-                    className="pelada-card-delete"
-                    onClick={e => {
-                      e.stopPropagation();
-                      setConfirmDeleteId(pelada.id);
-                    }}
-                    aria-label={`Excluir pelada de ${formatDate(pelada.date)}`}
-                  >
-                    🗑️
-                  </button>
                 </div>
               </Card>
             ))}
@@ -274,36 +251,6 @@ export function PeladasScreen({ profileId, onSelectPelada, cloneData }: PeladasS
         </form>
       </BottomSheet>
 
-      {/* Delete confirmation sheet */}
-      <BottomSheet
-        open={confirmDeleteId !== null}
-        onClose={() => setConfirmDeleteId(null)}
-        title="Apagar pelada?"
-      >
-        <div className="peladas-delete-confirm">
-          <p>Tem certeza que deseja apagar esta pelada? Não há volta.</p>
-          <div className="peladas-delete-buttons">
-            <Button
-              variant="ghost"
-              fullWidth
-              onClick={() => setConfirmDeleteId(null)}
-            >
-              Cancelar
-            </Button>
-            <Button
-              variant="destructive"
-              fullWidth
-              onClick={() => {
-                if (confirmDeleteId) {
-                  handleDeletePelada(confirmDeleteId);
-                }
-              }}
-            >
-              Apagar
-            </Button>
-          </div>
-        </div>
-      </BottomSheet>
     </div>
   );
 }

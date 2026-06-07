@@ -76,6 +76,7 @@ export default function App(): JSX.Element {
           onClone={data =>
             setScreen({ name: 'peladas', profileId: screen.profileId, cloneData: data })
           }
+          onDelete={() => setScreen({ name: 'peladas', profileId: screen.profileId })}
         />
       )}
 

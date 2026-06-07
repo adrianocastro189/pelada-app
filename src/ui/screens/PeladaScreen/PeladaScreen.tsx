@@ -27,13 +27,14 @@ interface PeladaScreenProps {
   peladaId: string;
   onBack?: () => void;
   onClone?: (data: ClonePeladaFormData) => void;
+  onDelete?: () => void;
 }
 
 /**
  * Screen for viewing and managing a single pelada (match).
  * Displays pelada info, roster, draw, and payments in accordions.
  */
-export function PeladaScreen({ profileId, peladaId, onBack, onClone }: PeladaScreenProps): JSX.Element {
+export function PeladaScreen({ profileId, peladaId, onBack, onClone, onDelete }: PeladaScreenProps): JSX.Element {
   const app = useApp();
   const [pelada, setPelada] = useState<PeladaRecord | null>(null);
   const [profile, setProfile] = useState<ProfileRecord | null>(null);
@@ -44,6 +45,7 @@ export function PeladaScreen({ profileId, peladaId, onBack, onClone }: PeladaScr
   const [drawingTeams, setDrawingTeams] = useState(false);
   const [showAddRoster, setShowAddRoster] = useState(false);
   const [profilePlayers, setProfilePlayers] = useState<PlayerRecord[]>([]);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Reload the roster and the player lookup map used by the payment/draw tables.
   const reloadRoster = async () => {
@@ -128,6 +130,17 @@ export function PeladaScreen({ profileId, peladaId, onBack, onClone }: PeladaScr
       console.error('Error drawing teams:', error);
     } finally {
       setDrawingTeams(false);
+    }
+  };
+
+  const handleDeletePelada = async () => {
+    try {
+      await app.deletePelada.execute(peladaId);
+      setShowDeleteConfirm(false);
+      onDelete?.();
+      onBack?.();
+    } catch (error) {
+      console.error('Error deleting pelada:', error);
     }
   };
 
@@ -222,27 +235,15 @@ export function PeladaScreen({ profileId, peladaId, onBack, onClone }: PeladaScr
   return (
     <div className="pelada-screen">
       <header className="pelada-header">
-        <div className="pelada-header-nav">
-          {onBack && (
-            <button
-              className="pelada-back-button"
-              onClick={onBack}
-              aria-label="Voltar"
-            >
-              ← Voltar
-            </button>
-          )}
-          {onClone && (
-            <button
-              className="pelada-clone-button"
-              onClick={handleClone}
-              aria-label="Clonar pelada"
-              title="Criar nova pelada com os mesmos dados"
-            >
-              Clonar
-            </button>
-          )}
-        </div>
+        {onBack && (
+          <button
+            className="pelada-back-button"
+            onClick={onBack}
+            aria-label="Voltar"
+          >
+            ← Voltar
+          </button>
+        )}
         <h1>⚽ {formatDate(pelada.date)}</h1>
         {pelada.time && <p className="pelada-time">🕐 {pelada.time}</p>}
         {pelada.location && <p className="pelada-location">📍 {pelada.location}</p>}
@@ -447,7 +448,47 @@ export function PeladaScreen({ profileId, peladaId, onBack, onClone }: PeladaScr
             />
           </div>
         </Accordion>
+        {/* Actions Accordion */}
+        <Accordion title="Ações" icon="⚙️">
+          <div className="accordion-content pelada-actions">
+            {onClone && (
+              <Button
+                variant="secondary"
+                fullWidth
+                onClick={handleClone}
+              >
+                📋 Clonar pelada
+              </Button>
+            )}
+            <Button
+              variant="destructive"
+              fullWidth
+              onClick={() => setShowDeleteConfirm(true)}
+            >
+              🗑️ Apagar pelada
+            </Button>
+          </div>
+        </Accordion>
       </main>
+
+      {/* Delete confirmation sheet */}
+      <BottomSheet
+        open={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        title="Apagar pelada?"
+      >
+        <div className="pelada-delete-confirm">
+          <p>Tem certeza? Esta ação remove a pelada e todos os seus dados (jogadores, times e pagamentos).</p>
+          <div className="pelada-delete-buttons">
+            <Button variant="ghost" fullWidth onClick={() => setShowDeleteConfirm(false)}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" fullWidth onClick={handleDeletePelada}>
+              Apagar
+            </Button>
+          </div>
+        </div>
+      </BottomSheet>
 
       {/* Add-to-roster sheet */}
       <BottomSheet
