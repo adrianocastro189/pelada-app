@@ -14,8 +14,9 @@ export class NeonSqlExecutor implements SqlExecutor {
   }
 
   async query<T>(sql: string, params?: unknown[]): Promise<QueryResult<T>> {
-    // .query() returns rows directly (FullResults defaults to false)
-    const rows = await this.execute.query<T>(sql, params ?? []) as unknown as T[]
+    // .query() generic param controls fullResults (boolean), not the row shape.
+    // Cast the result to T[] after the call instead of threading T through Neon's API.
+    const rows = await this.execute.query(sql, params ?? []) as unknown as T[]
     return { rows }
   }
 }
