@@ -48,14 +48,16 @@ export interface PlayerRepository {
   update(id: string, data: UpdatePlayerInput): Promise<PlayerRecord | null>;
 }
 
+/** Field position. `goalkeeper` also marks goalkeeper behaviour (roster slot + draw). */
+export type PlayerPosition = 'goalkeeper' | 'defense' | 'midfield' | 'attack';
+
 export interface CreatePlayerInput {
   name: string;
   nickname?: string | null;
   phone?: string | null;
   stars: number;
-  position: 'goalkeeper' | 'line';
+  position: PlayerPosition;
   speed: 'slow' | 'medium' | 'fast';
-  default_type: 'goalkeeper' | 'line';
   invited_by_id?: string | null;
 }
 
@@ -64,9 +66,8 @@ export interface UpdatePlayerInput {
   nickname?: string | null;
   phone?: string | null;
   stars?: number;
-  position?: 'goalkeeper' | 'line';
+  position?: PlayerPosition;
   speed?: 'slow' | 'medium' | 'fast';
-  default_type?: 'goalkeeper' | 'line';
   invited_by_id?: string | null;
 }
 
@@ -77,9 +78,8 @@ export interface PlayerRecord {
   nickname: string | null;
   phone: string | null;
   stars: number;
-  position: 'goalkeeper' | 'line';
+  position: PlayerPosition;
   speed: 'slow' | 'medium' | 'fast';
-  default_type: 'goalkeeper' | 'line';
   invited_by_id: string | null;
   status: 'active' | 'inactive';
   created_at: Date;

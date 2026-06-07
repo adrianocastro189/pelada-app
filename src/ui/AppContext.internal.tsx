@@ -1,3 +1,6 @@
+// This file intentionally mixes a context object, a hook and a provider component.
+// Fast-refresh only cares about pure-component files; disable the rule here.
+/* eslint-disable react-refresh/only-export-components */
 import React, { createContext } from 'react'
 import type { AppContextValue } from './AppContext'
 

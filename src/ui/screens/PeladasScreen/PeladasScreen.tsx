@@ -1,33 +1,70 @@
 import { useEffect, useState } from 'react';
-import { Button, BottomSheet, Input, Card, FAB } from '@ui/components';
+import { Button, BottomSheet, Input, Textarea, Card, FAB } from '@ui/components';
 import { useApp } from '@ui/AppContext';
 import type { PeladaRecord } from '@ports/repositories/PeladaRepository';
 import './PeladasScreen.css';
 
+/** Parses a 'YYYY-MM-DD' string as a local-timezone Date (avoids UTC midnight → previous-day shift). */
+const parseLocalDate = (dateStr: string): Date => {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
+
+/** Fields from a pelada that can be pre-filled when creating a clone. Date is excluded — the user must enter it. */
+export interface ClonePeladaFormData {
+  time: string;
+  location: string;
+  team_names: string;
+  players_per_team: number;
+  max_goalkeepers: number;
+  cost_per_player: number;
+  goalkeeper_pays: boolean;
+}
+
 interface PeladasScreenProps {
   profileId: string;
   onSelectPelada?: (peladaId: string) => void;
+  cloneData?: ClonePeladaFormData | null;
 }
+
+const emptyForm = {
+  date: '',
+  time: '',
+  location: '',
+  team_names: 'Time A\nTime B',
+  players_per_team: 5,
+  max_goalkeepers: 1,
+  /** Display string in R$ (e.g. "14.50"); converted to cents on submit. */
+  cost_per_player: '',
+  goalkeeper_pays: false,
+};
 
 /**
  * Screen for listing and managing peladas (matches) in a profile.
  * Lists all peladas and allows creation/deletion.
  */
-export function PeladasScreen({ profileId, onSelectPelada }: PeladasScreenProps): JSX.Element {
+export function PeladasScreen({ profileId, onSelectPelada, cloneData }: PeladasScreenProps): JSX.Element {
   const app = useApp();
   const [peladas, setPeladas] = useState<PeladaRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [showCreateSheet, setShowCreateSheet] = useState(false);
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-  const [formData, setFormData] = useState({
-    date: new Date().toISOString().split('T')[0],
-    time: '',
-    location: '',
-    players_per_team: 5,
-    max_goalkeepers: 1,
-    cost_per_player: 0,
-    goalkeeper_pays: false,
-  });
+  const [formData, setFormData] = useState({ ...emptyForm });
+
+  // Pre-fill the create form and open it when clone data is supplied (e.g. "Clone" button in PeladaScreen).
+  useEffect(() => {
+    if (!cloneData) return;
+    setFormData({
+      date: '',
+      time: cloneData.time,
+      location: cloneData.location,
+      team_names: cloneData.team_names,
+      players_per_team: cloneData.players_per_team,
+      max_goalkeepers: cloneData.max_goalkeepers,
+      cost_per_player: (cloneData.cost_per_player / 100).toFixed(2),
+      goalkeeper_pays: cloneData.goalkeeper_pays,
+    });
+    setShowCreateSheet(true);
+  }, [cloneData]);
 
   // Load peladas on mount and when profileId changes
   useEffect(() => {
@@ -45,43 +82,32 @@ export function PeladasScreen({ profileId, onSelectPelada }: PeladasScreenProps)
 
   const handleCreatePelada = async () => {
     if (!formData.date) return;
+    const teamNames = formData.team_names
+      .split('\n')
+      .map(n => n.trim())
+      .filter(n => n.length > 0);
+    if (teamNames.length < 2) return;
     try {
-      await app.createPelada.execute(profileId, {
-        date: new Date(formData.date),
-        time: formData.time || null,
-        location: formData.location || null,
-        players_per_team: formData.players_per_team,
-        max_goalkeepers: formData.max_goalkeepers,
-        cost_per_player: formData.cost_per_player,
-        goalkeeper_pays: formData.goalkeeper_pays,
-      });
+      await app.createPelada.execute(
+        profileId,
+        {
+          date: parseLocalDate(formData.date),
+          time: formData.time || null,
+          location: formData.location || null,
+          players_per_team: formData.players_per_team,
+          max_goalkeepers: formData.max_goalkeepers,
+          cost_per_player: Math.round(parseFloat(formData.cost_per_player || '0') * 100),
+          goalkeeper_pays: formData.goalkeeper_pays,
+        },
+        teamNames,
+      );
       // Reset form and reload peladas
-      setFormData({
-        date: new Date().toISOString().split('T')[0],
-        time: '',
-        location: '',
-        players_per_team: 5,
-        max_goalkeepers: 1,
-        cost_per_player: 0,
-        goalkeeper_pays: false,
-      });
+      setFormData({ ...emptyForm });
       setShowCreateSheet(false);
       const result = await app.listPeladas.execute(profileId);
       setPeladas(result);
     } catch (error) {
       console.error('Error creating pelada:', error);
-    }
-  };
-
-  const handleDeletePelada = async (id: string) => {
-    try {
-      await app.deletePelada.execute(id);
-      setConfirmDeleteId(null);
-      // Reload peladas
-      const result = await app.listPeladas.execute(profileId);
-      setPeladas(result);
-    } catch (error) {
-      console.error('Error deleting pelada:', error);
     }
   };
 
@@ -130,16 +156,6 @@ export function PeladasScreen({ profileId, onSelectPelada }: PeladasScreenProps)
                       {pelada.players_per_team} por time · R$ {(pelada.cost_per_player / 100).toFixed(2)}
                     </p>
                   </div>
-                  <button
-                    className="pelada-card-delete"
-                    onClick={e => {
-                      e.stopPropagation();
-                      setConfirmDeleteId(pelada.id);
-                    }}
-                    aria-label={`Excluir pelada de ${formatDate(pelada.date)}`}
-                  >
-                    🗑️
-                  </button>
                 </div>
               </Card>
             ))}
@@ -149,7 +165,10 @@ export function PeladasScreen({ profileId, onSelectPelada }: PeladasScreenProps)
         <Button
           variant="secondary"
           fullWidth
-          onClick={() => setShowCreateSheet(true)}
+          onClick={() => {
+            setFormData({ ...emptyForm, date: new Date().toISOString().split('T')[0] });
+            setShowCreateSheet(true);
+          }}
           className="peladas-create-button"
         >
           + Criar nova pelada
@@ -157,7 +176,10 @@ export function PeladasScreen({ profileId, onSelectPelada }: PeladasScreenProps)
       </main>
 
       <FAB
-        onClick={() => setShowCreateSheet(true)}
+        onClick={() => {
+          setFormData({ ...emptyForm, date: new Date().toISOString().split('T')[0] });
+          setShowCreateSheet(true);
+        }}
         label="Criar nova pelada"
         icon="+"
       />
@@ -167,15 +189,7 @@ export function PeladasScreen({ profileId, onSelectPelada }: PeladasScreenProps)
         open={showCreateSheet}
         onClose={() => {
           setShowCreateSheet(false);
-          setFormData({
-            date: new Date().toISOString().split('T')[0],
-            time: '',
-            location: '',
-            players_per_team: 5,
-            max_goalkeepers: 1,
-            cost_per_player: 0,
-            goalkeeper_pays: false,
-          });
+          setFormData({ ...emptyForm, date: new Date().toISOString().split('T')[0] });
         }}
         title="Nova pelada"
       >
@@ -206,6 +220,13 @@ export function PeladasScreen({ profileId, onSelectPelada }: PeladasScreenProps)
             value={formData.location}
             onChange={e => setFormData({ ...formData, location: e.target.value })}
           />
+          <Textarea
+            label="Nomes dos times (um por linha)"
+            placeholder={'Time A\nTime B'}
+            rows={3}
+            value={formData.team_names}
+            onChange={e => setFormData({ ...formData, team_names: e.target.value })}
+          />
           <div className="peladas-form-row">
             <Input
               label="Jogadores por time"
@@ -225,12 +246,13 @@ export function PeladasScreen({ profileId, onSelectPelada }: PeladasScreenProps)
             />
           </div>
           <Input
-            label="Custo por jogador (centavos)"
+            label="Custo por jogador (R$)"
             type="number"
             min="0"
-            step="100"
+            step="0.01"
+            placeholder="0.00"
             value={formData.cost_per_player}
-            onChange={e => setFormData({ ...formData, cost_per_player: parseInt(e.target.value) })}
+            onChange={e => setFormData({ ...formData, cost_per_player: e.target.value })}
           />
           <label className="peladas-checkbox">
             <input
@@ -246,36 +268,6 @@ export function PeladasScreen({ profileId, onSelectPelada }: PeladasScreenProps)
         </form>
       </BottomSheet>
 
-      {/* Delete confirmation sheet */}
-      <BottomSheet
-        open={confirmDeleteId !== null}
-        onClose={() => setConfirmDeleteId(null)}
-        title="Apagar pelada?"
-      >
-        <div className="peladas-delete-confirm">
-          <p>Tem certeza que deseja apagar esta pelada? Não há volta.</p>
-          <div className="peladas-delete-buttons">
-            <Button
-              variant="ghost"
-              fullWidth
-              onClick={() => setConfirmDeleteId(null)}
-            >
-              Cancelar
-            </Button>
-            <Button
-              variant="destructive"
-              fullWidth
-              onClick={() => {
-                if (confirmDeleteId) {
-                  handleDeletePelada(confirmDeleteId);
-                }
-              }}
-            >
-              Apagar
-            </Button>
-          </div>
-        </div>
-      </BottomSheet>
     </div>
   );
 }

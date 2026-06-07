@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { PeladaRecord } from '@ports/repositories/PeladaRepository';
 import { PeladasScreen } from './PeladasScreen';
+import type { ClonePeladaFormData } from './PeladasScreen';
 import * as AppContextModule from '@ui/AppContext';
 
 vi.mock('@ui/AppContext', async () => {
@@ -43,17 +44,15 @@ const mockPeladas: PeladaRecord[] = [
 describe('PeladasScreen', () => {
   let mockListPeladas: ReturnType<typeof vi.fn>;
   let mockCreatePelada: ReturnType<typeof vi.fn>;
-  let mockDeletePelada: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     mockListPeladas = vi.fn().mockResolvedValue(mockPeladas);
     mockCreatePelada = vi.fn().mockResolvedValue({ ...mockPeladas[0], id: '3' });
-    mockDeletePelada = vi.fn().mockResolvedValue(undefined);
 
     (AppContextModule.useApp as ReturnType<typeof vi.fn>).mockReturnValue({
       listPeladas: { execute: mockListPeladas },
       createPelada: { execute: mockCreatePelada },
-      deletePelada: { execute: mockDeletePelada },
+      // deletePelada is now handled from inside PeladaScreen, not from the list
     });
   });
 
@@ -122,45 +121,54 @@ describe('PeladasScreen', () => {
     await userEvent.click(submitButton);
 
     await waitFor(() => {
-      expect(mockCreatePelada).toHaveBeenCalled();
+      expect(mockCreatePelada).toHaveBeenCalledWith(
+        'prof-1',
+        expect.objectContaining({ time: '14:30' }),
+        ['Time A', 'Time B'],
+      );
     });
   });
 
-  it('displays delete button for each pelada', async () => {
+  it('does not show delete buttons on pelada cards (deletion moved to PeladaScreen)', async () => {
     render(<PeladasScreen profileId="prof-1" />);
     await waitFor(() => {
       expect(screen.queryByText('Carregando...')).not.toBeInTheDocument();
     });
-    const deleteButtons = screen.getAllByLabelText(/Excluir pelada/);
-    expect(deleteButtons.length).toBe(2);
+    expect(screen.queryAllByLabelText(/Excluir pelada/).length).toBe(0);
   });
 
-  it('opens delete confirmation when delete button clicked', async () => {
-    render(<PeladasScreen profileId="prof-1" />);
-    await waitFor(() => {
-      expect(screen.queryByText('Carregando...')).not.toBeInTheDocument();
+  describe('clone pre-fill', () => {
+    const cloneData: ClonePeladaFormData = {
+      time: '09:00',
+      location: 'Campo do Zé',
+      team_names: 'Azul\nVermelho\nVerde',
+      players_per_team: 6,
+      max_goalkeepers: 2,
+      cost_per_player: 1400,
+      goalkeeper_pays: true,
+    };
+
+    it('opens the create sheet when cloneData is provided', async () => {
+      render(<PeladasScreen profileId="prof-1" cloneData={cloneData} />);
+      await waitFor(() => {
+        expect(screen.getByText('Nova pelada')).toBeInTheDocument();
+      });
     });
-    const deleteButtons = screen.getAllByLabelText(/Excluir pelada/);
-    await userEvent.click(deleteButtons[0]);
-    await waitFor(() => {
-      expect(screen.getByText('Apagar pelada?')).toBeInTheDocument();
-    });
-  });
 
-  it('deletes pelada on confirmation', async () => {
-    render(<PeladasScreen profileId="prof-1" />);
-    await waitFor(() => {
-      expect(screen.queryByText('Carregando...')).not.toBeInTheDocument();
-    });
+    it('pre-fills the form with clone data and leaves date empty', async () => {
+      render(<PeladasScreen profileId="prof-1" cloneData={cloneData} />);
+      await waitFor(() => {
+        expect(screen.getByText('Nova pelada')).toBeInTheDocument();
+      });
 
-    const deleteButtons = screen.getAllByLabelText(/Excluir pelada/);
-    await userEvent.click(deleteButtons[0]);
+      const timeInput = screen.getByLabelText('Hora (opcional)') as HTMLInputElement;
+      expect(timeInput.value).toBe('09:00');
 
-    const confirmButton = screen.getByRole('button', { name: 'Apagar' });
-    await userEvent.click(confirmButton);
+      const locationInput = screen.getByLabelText('Local (opcional)') as HTMLInputElement;
+      expect(locationInput.value).toBe('Campo do Zé');
 
-    await waitFor(() => {
-      expect(mockDeletePelada).toHaveBeenCalledWith(mockPeladas[0].id);
+      const dateInput = screen.getByLabelText('Data') as HTMLInputElement;
+      expect(dateInput.value).toBe('');
     });
   });
 });

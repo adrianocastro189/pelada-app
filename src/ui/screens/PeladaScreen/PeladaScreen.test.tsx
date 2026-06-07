@@ -1,10 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import type { PeladaRecord } from '@ports/repositories/PeladaRepository';
 import type { PeladaPlayerRecord } from '@ports/repositories/PeladaPlayerRepository';
 import type { DrawResult } from '@application/use-cases/draw/GetDrawUseCase';
 import type { PlayerRecord } from '@ports/repositories/PlayerRepository';
 import { PeladaScreen } from './PeladaScreen';
+import type { ClonePeladaFormData } from '@ui/screens/PeladasScreen';
 import * as AppContextModule from '@ui/AppContext';
 
 vi.mock('@ui/AppContext', async () => {
@@ -29,9 +31,9 @@ const mockPelada: PeladaRecord = {
 };
 
 const mockPlayers: PlayerRecord[] = [
-  { id: 'pl1', profile_id: 'prof-1', name: 'João', nickname: 'João', phone: '', stars: 2.5, position: 'line', speed: 'fast', default_type: 'line', invited_by_id: null, status: 'active', created_at: new Date() },
-  { id: 'pl2', profile_id: 'prof-1', name: 'Maria', nickname: 'Maria', phone: '', stars: 3, position: 'goalkeeper', speed: 'medium', default_type: 'goalkeeper', invited_by_id: null, status: 'active', created_at: new Date() },
-  { id: 'pl3', profile_id: 'prof-1', name: 'Pedro', nickname: 'Pedro', phone: '', stars: 2, position: 'line', speed: 'slow', default_type: 'line', invited_by_id: null, status: 'active', created_at: new Date() },
+  { id: 'pl1', profile_id: 'prof-1', name: 'João', nickname: 'João', phone: '', stars: 2.5, position: 'midfield', speed: 'fast', invited_by_id: null, status: 'active', created_at: new Date() },
+  { id: 'pl2', profile_id: 'prof-1', name: 'Maria', nickname: 'Maria', phone: '', stars: 3, position: 'goalkeeper', speed: 'medium', invited_by_id: null, status: 'active', created_at: new Date() },
+  { id: 'pl3', profile_id: 'prof-1', name: 'Pedro', nickname: 'Pedro', phone: '', stars: 2, position: 'midfield', speed: 'slow', invited_by_id: null, status: 'active', created_at: new Date() },
 ];
 
 const mockRoster: PeladaPlayerRecord[] = [
@@ -58,6 +60,7 @@ const mockDraw: DrawResult[] = [
 
 describe('PeladaScreen', () => {
   let mockGetPelada: ReturnType<typeof vi.fn>;
+  let mockGetProfile: ReturnType<typeof vi.fn>;
   let mockGetRoster: ReturnType<typeof vi.fn>;
   let mockGetDraw: ReturnType<typeof vi.fn>;
   let mockGetPlayer: ReturnType<typeof vi.fn>;
@@ -66,6 +69,12 @@ describe('PeladaScreen', () => {
 
   beforeEach(() => {
     mockGetPelada = vi.fn().mockResolvedValue(mockPelada);
+    mockGetProfile = vi.fn().mockResolvedValue({
+      id: 'prof-1',
+      name: 'Test',
+      convocation_template: '',
+      created_at: new Date(),
+    });
     mockGetRoster = vi.fn().mockResolvedValue(mockRoster);
     mockGetDraw = vi.fn().mockResolvedValue(mockDraw);
     mockGetPlayer = vi.fn().mockImplementation((playerId: string) => {
@@ -77,11 +86,13 @@ describe('PeladaScreen', () => {
 
     (AppContextModule.useApp as ReturnType<typeof vi.fn>).mockReturnValue({
       getPelada: { execute: mockGetPelada },
+      getProfile: { execute: mockGetProfile },
       getRoster: { execute: mockGetRoster },
       getDraw: { execute: mockGetDraw },
       getPlayer: { execute: mockGetPlayer },
       drawTeams: { execute: mockDrawTeams },
       setPlayerPaid: { execute: mockSetPlayerPaid },
+      deletePelada: { execute: vi.fn().mockResolvedValue(undefined) },
     });
   });
 
@@ -117,6 +128,182 @@ describe('PeladaScreen', () => {
     render(<PeladaScreen profileId="prof-1" peladaId="p1" />);
     await waitFor(() => {
       expect(screen.getByText('Pelada não encontrada')).toBeInTheDocument();
+    });
+  });
+
+  describe('displayName format in roster', () => {
+    it('shows "Name - Nickname" when player has a distinct nickname', async () => {
+      // Override player data so nickname differs from name
+      mockGetPlayer.mockImplementation((playerId: string) => {
+        const overrides: Record<string, PlayerRecord> = {
+          pl1: { ...mockPlayers[0], nickname: 'Joãozinho' },
+          pl2: { ...mockPlayers[1], nickname: null },
+          pl3: { ...mockPlayers[2], nickname: null },
+        };
+        return Promise.resolve(overrides[playerId] ?? { id: playerId, name: 'Unknown', nickname: null });
+      });
+
+      render(<PeladaScreen profileId="prof-1" peladaId="p1" />);
+      await waitFor(() => {
+        expect(screen.queryByText('Carregando...')).not.toBeInTheDocument();
+      });
+
+      // Open roster accordion
+      await userEvent.click(screen.getByRole('button', { name: /Roster/i }));
+      // João is a line player — should show combined name without goalkeeper emoji
+      expect(screen.queryByText('João - Joãozinho 🧤')).not.toBeInTheDocument();
+      expect(await screen.findByText('João - Joãozinho')).toBeInTheDocument();
+    });
+
+    it('shows name only when player has no nickname', async () => {
+      mockGetPlayer.mockImplementation((playerId: string) => {
+        const overrides: Record<string, PlayerRecord> = {
+          pl3: { ...mockPlayers[2], nickname: null },
+        };
+        const base = mockPlayers.find(p => p.id === playerId);
+        return Promise.resolve(overrides[playerId] ?? base ?? { id: playerId, name: 'Unknown', nickname: null });
+      });
+
+      render(<PeladaScreen profileId="prof-1" peladaId="p1" />);
+      await waitFor(() => {
+        expect(screen.queryByText('Carregando...')).not.toBeInTheDocument();
+      });
+
+      await userEvent.click(screen.getByRole('button', { name: /Roster/i }));
+      expect(await screen.findByText('Pedro')).toBeInTheDocument();
+      expect(screen.queryByText(/Pedro -/)).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Actions accordion', () => {
+    const openActionsAccordion = async () => {
+      // Use the unique ⚙️ icon to avoid colliding with "Informações" accordion
+      const actionsButton = screen.getByRole('button', { name: /⚙️/ });
+      await userEvent.click(actionsButton);
+    };
+
+    describe('clone button', () => {
+      it('shows clone button inside accordion when onClone prop is provided', async () => {
+        const onClone = vi.fn();
+        render(<PeladaScreen profileId="prof-1" peladaId="p1" onClone={onClone} />);
+        await waitFor(() => expect(screen.queryByText('Carregando...')).not.toBeInTheDocument());
+        await openActionsAccordion();
+        expect(screen.getByRole('button', { name: /Clonar pelada/i })).toBeInTheDocument();
+      });
+
+      it('hides clone button when onClone prop is absent', async () => {
+        render(<PeladaScreen profileId="prof-1" peladaId="p1" />);
+        await waitFor(() => expect(screen.queryByText('Carregando...')).not.toBeInTheDocument());
+        await openActionsAccordion();
+        expect(screen.queryByRole('button', { name: /Clonar pelada/i })).not.toBeInTheDocument();
+      });
+
+      it('calls onClone with pelada data and team names when clicked', async () => {
+        const onClone = vi.fn();
+        render(<PeladaScreen profileId="prof-1" peladaId="p1" onClone={onClone} />);
+        await waitFor(() => expect(screen.queryByText('Carregando...')).not.toBeInTheDocument());
+        await openActionsAccordion();
+
+        await userEvent.click(screen.getByRole('button', { name: /Clonar pelada/i }));
+
+        expect(onClone).toHaveBeenCalledOnce();
+        const payload: ClonePeladaFormData = onClone.mock.calls[0][0];
+        expect(payload.time).toBe(mockPelada.time);
+        expect(payload.location).toBe(mockPelada.location);
+        expect(payload.players_per_team).toBe(mockPelada.players_per_team);
+        expect(payload.max_goalkeepers).toBe(mockPelada.max_goalkeepers);
+        expect(payload.cost_per_player).toBe(mockPelada.cost_per_player);
+        expect(payload.goalkeeper_pays).toBe(mockPelada.goalkeeper_pays);
+        expect(payload.team_names).toContain('Time A');
+        expect(payload.team_names).toContain('Time B');
+      });
+    });
+
+    describe('delete button', () => {
+      it('shows Apagar button in accordion', async () => {
+        render(<PeladaScreen profileId="prof-1" peladaId="p1" />);
+        await waitFor(() => expect(screen.queryByText('Carregando...')).not.toBeInTheDocument());
+        await openActionsAccordion();
+        expect(screen.getByRole('button', { name: /Apagar pelada/i })).toBeInTheDocument();
+      });
+
+      it('opens delete confirmation sheet when Apagar is clicked', async () => {
+        render(<PeladaScreen profileId="prof-1" peladaId="p1" />);
+        await waitFor(() => expect(screen.queryByText('Carregando...')).not.toBeInTheDocument());
+        await openActionsAccordion();
+
+        await userEvent.click(screen.getByRole('button', { name: /Apagar pelada/i }));
+
+        await waitFor(() => {
+          expect(screen.getByText('Apagar pelada?')).toBeInTheDocument();
+        });
+      });
+
+      it('calls deletePelada and onDelete when confirmed', async () => {
+        const mockDeletePelada = vi.fn().mockResolvedValue(undefined);
+        const onDelete = vi.fn();
+        (AppContextModule.useApp as ReturnType<typeof vi.fn>).mockReturnValue({
+          getPelada: { execute: mockGetPelada },
+          getProfile: { execute: mockGetProfile },
+          getRoster: { execute: mockGetRoster },
+          getDraw: { execute: mockGetDraw },
+          getPlayer: { execute: mockGetPlayer },
+          drawTeams: { execute: mockDrawTeams },
+          setPlayerPaid: { execute: mockSetPlayerPaid },
+          deletePelada: { execute: mockDeletePelada },
+        });
+
+        render(<PeladaScreen profileId="prof-1" peladaId="p1" onDelete={onDelete} />);
+        await waitFor(() => expect(screen.queryByText('Carregando...')).not.toBeInTheDocument());
+        await openActionsAccordion();
+
+        await userEvent.click(screen.getByRole('button', { name: /Apagar pelada/i }));
+        await waitFor(() => expect(screen.getByText('Apagar pelada?')).toBeInTheDocument());
+
+        await userEvent.click(screen.getByRole('button', { name: 'Apagar' }));
+
+        await waitFor(() => {
+          expect(mockDeletePelada).toHaveBeenCalledWith('p1');
+          expect(onDelete).toHaveBeenCalledOnce();
+        });
+      });
+    });
+  });
+
+  describe('Payments tab goalkeeper_pays filter', () => {
+    const openPaymentsAccordion = async () => {
+      const paymentsButton = screen.getByRole('button', { name: /Pagamentos/i });
+      await userEvent.click(paymentsButton);
+    };
+
+    it('hides goalkeeper from payments when goalkeeper_pays is false', async () => {
+      // mockPelada already has goalkeeper_pays: false
+      render(<PeladaScreen profileId="prof-1" peladaId="p1" />);
+      await waitFor(() => {
+        expect(screen.queryByText('Carregando...')).not.toBeInTheDocument();
+      });
+      await openPaymentsAccordion();
+
+      // Maria is the goalkeeper (pl2, slot_type: 'goalkeeper'); she should not appear
+      const mariaPayLabel = screen.queryByLabelText('Marcar Maria como pago');
+      expect(mariaPayLabel).not.toBeInTheDocument();
+
+      // Line players (João, Pedro) should still appear
+      expect(screen.getByLabelText('Marcar João como pago')).toBeInTheDocument();
+      expect(screen.getByLabelText('Marcar Pedro como pago')).toBeInTheDocument();
+    });
+
+    it('shows goalkeeper in payments when goalkeeper_pays is true', async () => {
+      mockGetPelada.mockResolvedValue({ ...mockPelada, goalkeeper_pays: true });
+      render(<PeladaScreen profileId="prof-1" peladaId="p1" />);
+      await waitFor(() => {
+        expect(screen.queryByText('Carregando...')).not.toBeInTheDocument();
+      });
+      await openPaymentsAccordion();
+
+      expect(screen.getByLabelText('Marcar Maria como pago')).toBeInTheDocument();
+      expect(screen.getByLabelText('Marcar João como pago')).toBeInTheDocument();
+      expect(screen.getByLabelText('Marcar Pedro como pago')).toBeInTheDocument();
     });
   });
 });

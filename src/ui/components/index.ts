@@ -9,3 +9,4 @@ export { FAB } from './FAB';
 export { Accordion } from './Accordion';
 export { BottomNav } from './BottomNav';
 export { BottomSheet } from './BottomSheet';
+export { MessageCard } from './MessageCard';

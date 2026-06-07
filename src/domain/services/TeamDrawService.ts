@@ -5,7 +5,7 @@ import type { BalancingStrategy } from './BalancingStrategy'
 export interface DrawPlayer {
   id: string
   stars: number
-  position: 'goalkeeper' | 'line'
+  position: 'goalkeeper' | 'defense' | 'midfield' | 'attack'
   speed: 'slow' | 'medium' | 'fast'
   slotType: 'goalkeeper' | 'line'
 }
@@ -33,12 +33,15 @@ export class TeamDrawService {
    *
    * Algorithm:
    *  1. Goalkeepers are drawn separately (one per team) only when their count equals
-   *     the number of teams; otherwise they are treated as line players.
+   *     the number of teams; otherwise they are excluded from the draw entirely (they
+   *     never appear in the result — manual decision on the field).
    *  2. Line players are shuffled (random), then stable-sorted by stars DESC so that
    *     players within the same star tier remain in random relative order.
    *  3. Players are assigned to teams with a greedy "lowest score first" rule driven
    *     by the injected BalancingStrategy, respecting per-team capacity limits so that
    *     team sizes differ by at most one (e.g. 14 players / 3 teams → 5 / 5 / 4).
+   *     Ties on star score are broken by positional balance (spreading
+   *     defense/midfield/attack evenly), then by team size.
    *  4. Shuffled goalkeepers are appended to teams in order.
    *
    * @param players  Full roster for the draw.
@@ -58,8 +61,11 @@ export class TeamDrawService {
     const goalkeepers = players.filter(p => p.slotType === 'goalkeeper')
     const linePlayers = players.filter(p => p.slotType === 'line')
 
+    // Goalkeepers are drawn (one per team) only when their count equals the number
+    // of teams. Otherwise they are left out of the draw entirely (manual decision on
+    // the field) — never mixed into the line draft.
     const drawGoaliesSeparately = goalkeepers.length === teamCount
-    const draft = drawGoaliesSeparately ? linePlayers : [...linePlayers, ...goalkeepers]
+    const draft = linePlayers
 
     // Shuffle introduces per-tier randomness; stable-sort then orders by stars DESC.
     const sorted = this.sortByBalance(random.shuffle(draft))
@@ -74,6 +80,7 @@ export class TeamDrawService {
       teamIndex: i,
       playerIds: [],
       stars: [],
+      positionCounts: {},
       capacity: capacities[i],
     }))
 
@@ -82,15 +89,22 @@ export class TeamDrawService {
       const available = teams.filter(t => t.playerIds.length < t.capacity)
       if (available.length === 0) continue
 
+      // Primary: lowest star score.
       const minScore = Math.min(...available.map(t => strategy.score(t.stars)))
-      const tied = available.filter(t => strategy.score(t.stars) === minScore)
-      // Among tied teams pick the one with the fewest players; if still tied, take the
-      // first (which is stable relative to the pre-shuffle, so still random).
+      let tied = available.filter(t => strategy.score(t.stars) === minScore)
+
+      // Tiebreak 1 (spec criterion #2): spread positions — prefer the team with the
+      // fewest players already holding this player's position.
+      const minPos = Math.min(...tied.map(t => t.positionCounts[player.position] ?? 0))
+      tied = tied.filter(t => (t.positionCounts[player.position] ?? 0) === minPos)
+
+      // Tiebreak 2: fewest players overall; if still tied, take the first (stable
+      // relative to the pre-shuffle order, so still random).
       const minSize = Math.min(...tied.map(t => t.playerIds.length))
-      // tied is non-empty (filtered from available which is non-empty), so [0] is safe.
       const chosen = tied.find(t => t.playerIds.length === minSize) ?? tied[0]
       chosen.playerIds.push(player.id)
       chosen.stars.push(player.stars)
+      chosen.positionCounts[player.position] = (chosen.positionCounts[player.position] ?? 0) + 1
     }
 
     // Append goalkeepers (shuffled) one per team when drawn separately.
@@ -103,12 +117,11 @@ export class TeamDrawService {
     return teams.map(({ teamIndex, playerIds }) => ({ teamIndex, playerIds }))
   }
 
-  /** Stable-sorts players by stars DESC, then position, then speed for deterministic ordering. */
+  /** Stable-sorts players by stars DESC, then speed DESC for deterministic ordering. */
   private sortByBalance(players: DrawPlayer[]): DrawPlayer[] {
     const speedRank: Record<string, number> = { fast: 2, medium: 1, slow: 0 }
     return [...players].sort((a, b) => {
       if (b.stars !== a.stars) return b.stars - a.stars
-      if (a.position !== b.position) return a.position === 'goalkeeper' ? -1 : 1
       return speedRank[b.speed] - speedRank[a.speed]
     })
   }
@@ -119,5 +132,7 @@ interface TeamSlot {
   teamIndex: number
   playerIds: string[]
   stars: number[]
+  /** Count of assigned players per position, for positional balancing. */
+  positionCounts: Record<string, number>
   capacity: number
 }

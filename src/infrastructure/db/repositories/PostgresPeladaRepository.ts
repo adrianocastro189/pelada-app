@@ -1,6 +1,20 @@
 import { PeladaRepository, PeladaRecord, CreatePeladaInput, UpdatePeladaInput } from '@ports/repositories/PeladaRepository';
 import { SqlExecutor } from '@ports/SqlExecutor';
 
+/**
+ * Normalises a raw Postgres row into a PeladaRecord.
+ * BIGINT columns (cost_per_player) are returned by the Neon driver as strings;
+ * we cast them to numbers here so arithmetic throughout the app works correctly.
+ */
+function normalizeRow(r: PeladaRecord): PeladaRecord {
+  return {
+    ...r,
+    date: new Date(r.date),
+    created_at: new Date(r.created_at),
+    cost_per_player: Number(r.cost_per_player),
+  };
+}
+
 export class PostgresPeladaRepository implements PeladaRepository {
   constructor(private sqlExecutor: SqlExecutor) {}
 
@@ -22,7 +36,7 @@ export class PostgresPeladaRepository implements PeladaRepository {
     ]);
     const record = result.rows[0];
     if (!record) throw new Error('Failed to insert pelada');
-    return { ...record, date: new Date(record.date), created_at: new Date(record.created_at) };
+    return normalizeRow(record);
   }
 
   async clone(id: string, newDate: Date): Promise<PeladaRecord> {
@@ -35,7 +49,7 @@ export class PostgresPeladaRepository implements PeladaRepository {
     const result = await this.sqlExecutor.query<PeladaRecord>(sql, [newDate, id]);
     const record = result.rows[0];
     if (!record) throw new Error('Failed to clone pelada');
-    return { ...record, date: new Date(record.date), created_at: new Date(record.created_at) };
+    return normalizeRow(record);
   }
 
   async delete(id: string): Promise<boolean> {
@@ -52,7 +66,7 @@ export class PostgresPeladaRepository implements PeladaRepository {
     const result = await this.sqlExecutor.query<PeladaRecord>(sql, [id]);
     if (result.rows.length === 0) return null;
     const record = result.rows[0];
-    return { ...record, date: new Date(record.date), created_at: new Date(record.created_at) };
+    return normalizeRow(record);
   }
 
   async listByProfileId(profileId: string): Promise<PeladaRecord[]> {
@@ -61,7 +75,7 @@ export class PostgresPeladaRepository implements PeladaRepository {
       FROM peladas WHERE profile_id = $1 ORDER BY date DESC
     `;
     const result = await this.sqlExecutor.query<PeladaRecord>(sql, [profileId]);
-    return result.rows.map((r) => ({ ...r, date: new Date(r.date), created_at: new Date(r.created_at) }));
+    return result.rows.map(normalizeRow);
   }
 
   async update(id: string, data: UpdatePeladaInput): Promise<PeladaRecord | null> {
@@ -109,7 +123,6 @@ export class PostgresPeladaRepository implements PeladaRepository {
 
     const result = await this.sqlExecutor.query<PeladaRecord>(sql, values);
     if (result.rows.length === 0) return null;
-    const record = result.rows[0];
-    return { ...record, date: new Date(record.date), created_at: new Date(record.created_at) };
+    return normalizeRow(result.rows[0]);
   }
 }

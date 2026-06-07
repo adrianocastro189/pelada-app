@@ -49,13 +49,14 @@
 }
 
 .balance-card.general {
-  background: linear-gradient(135deg, var(--color-primary-700), var(--color-primary-600));
+  background: linear-gradient(135deg, var(--color-primary-700), var(--color-primary-500));
   color: white;
 }
 
 .balance-card.month {
-  background: linear-gradient(135deg, var(--color-accent-solar-700), var(--color-accent-solar-600));
-  color: white;
+  background: linear-gradient(135deg, var(--color-accent-500), var(--color-accent-300));
+  /* Yellow background requires dark text for WCAG contrast */
+  color: var(--color-neutral-900);
 }
 
 .balance-card.previous {
@@ -65,16 +66,15 @@
 
 .balance-label {
   margin: 0;
-  font-size: var(--font-size-label);
-  opacity: 0.9;
-  font-weight: 500;
+  font-size: var(--font-label);
+  font-weight: 600;
 }
 
 .balance-value {
   margin: var(--space-1) 0 0;
-  font-size: var(--font-size-h2);
+  font-size: var(--font-h2);
   font-weight: 700;
-  font-family: var(--font-family-titles);
+  font-family: var(--font-h2-family);
 }
 
 /* Filters */
@@ -128,7 +128,7 @@
 .financial-empty {
   text-align: center;
   color: var(--color-neutral-500);
-  font-size: var(--font-size-body);
+  font-size: var(--font-body);
   padding: var(--space-8) var(--space-4);
 }
 
@@ -158,14 +158,14 @@
 
 .record-description {
   margin: 0;
-  font-size: var(--font-size-body);
+  font-size: var(--font-body);
   font-weight: 600;
   color: var(--color-neutral-800);
 }
 
 .record-date {
   margin: var(--space-1) 0 0;
-  font-size: var(--font-size-label);
+  font-size: var(--font-label);
   color: var(--color-neutral-600);
 }
 
@@ -178,17 +178,17 @@
 
 .record-amount {
   font-weight: 700;
-  font-size: var(--font-size-body);
+  font-size: var(--font-body);
   text-align: right;
   min-width: 100px;
 }
 
 .record-amount.credit {
-  color: var(--color-success-700);
+  color: var(--color-success);
 }
 
 .record-amount.debit {
-  color: var(--color-danger-700);
+  color: var(--color-danger);
 }
 
 .record-delete {
@@ -245,7 +245,7 @@
 .financial-delete-confirm p {
   margin: 0;
   color: var(--color-neutral-700);
-  font-size: var(--font-size-body);
+  font-size: var(--font-body);
   line-height: 1.5;
 }
 

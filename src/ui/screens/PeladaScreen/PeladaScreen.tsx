@@ -1,43 +1,78 @@
 import { useEffect, useState } from 'react';
-import { Accordion, Button } from '@ui/components';
+import { Accordion, Button, BottomSheet, MessageCard } from '@ui/components';
 import { useApp } from '@ui/AppContext';
+import {
+  buildConvocationMessage,
+  buildDrawnTeamsMessage,
+  buildPaymentChecklistMessage,
+  computeTeamStats,
+  type TeamForMessage,
+} from '@domain/services';
+import { positionToSlotType } from '@domain/value-objects';
+import type { ProfileRecord } from '@ports/repositories/ProfileRepository';
 import type { PeladaRecord } from '@ports/repositories/PeladaRepository';
 import type { PeladaPlayerRecord } from '@ports/repositories/PeladaPlayerRepository';
 import type { DrawResult } from '@application/use-cases/draw/GetDrawUseCase';
 import type { PlayerRecord } from '@ports/repositories/PlayerRepository';
+import type { ClonePeladaFormData } from '@ui/screens/PeladasScreen';
 import './PeladaScreen.css';
+
+/** Returns "Name - Nickname" when a nickname exists, otherwise just "Name". */
+function displayName(player: { name: string; nickname?: string | null }): string {
+  return player.nickname ? `${player.name} - ${player.nickname}` : player.name;
+}
 
 interface PeladaScreenProps {
   profileId: string;
   peladaId: string;
   onBack?: () => void;
+  onClone?: (data: ClonePeladaFormData) => void;
+  onDelete?: () => void;
 }
 
 /**
  * Screen for viewing and managing a single pelada (match).
  * Displays pelada info, roster, draw, and payments in accordions.
  */
-export function PeladaScreen({ peladaId, onBack }: PeladaScreenProps): JSX.Element {
+export function PeladaScreen({ profileId, peladaId, onBack, onClone, onDelete }: PeladaScreenProps): JSX.Element {
   const app = useApp();
   const [pelada, setPelada] = useState<PeladaRecord | null>(null);
+  const [profile, setProfile] = useState<ProfileRecord | null>(null);
   const [roster, setRoster] = useState<PeladaPlayerRecord[]>([]);
   const [draw, setDraw] = useState<DrawResult[]>([]);
   const [players, setPlayers] = useState<Map<string, PlayerRecord>>(new Map());
   const [loading, setLoading] = useState(true);
   const [drawingTeams, setDrawingTeams] = useState(false);
+  const [showAddRoster, setShowAddRoster] = useState(false);
+  const [profilePlayers, setProfilePlayers] = useState<PlayerRecord[]>([]);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  // Reload the roster and the player lookup map used by the payment/draw tables.
+  const reloadRoster = async () => {
+    const rosterData = await app.getRoster.execute(peladaId);
+    setRoster(rosterData);
+    const playerMap = new Map<string, PlayerRecord>();
+    for (const rosterEntry of rosterData) {
+      const player = await app.getPlayer.execute(rosterEntry.player_id);
+      playerMap.set(rosterEntry.player_id, player);
+    }
+    setPlayers(playerMap);
+  };
 
   // Load pelada data on mount
   useEffect(() => {
     const loadPeladaData = async () => {
       setLoading(true);
       try {
-        const [peladaData, rosterData, drawData] = await Promise.all([
+        const [peladaData, profileData, rosterData, drawData] = await Promise.all([
           app.getPelada.execute(peladaId),
+          app.getProfile.execute(profileId),
           app.getRoster.execute(peladaId),
           app.getDraw.execute(peladaId),
         ]);
 
         setPelada(peladaData);
+        setProfile(profileData);
         setRoster(rosterData);
         setDraw(drawData);
 
@@ -54,7 +89,35 @@ export function PeladaScreen({ peladaId, onBack }: PeladaScreenProps): JSX.Eleme
     };
 
     loadPeladaData();
-  }, [peladaId, app]);
+  }, [peladaId, profileId, app]);
+
+  const openAddRoster = async () => {
+    setShowAddRoster(true);
+    try {
+      const active = await app.listPlayers.execute(profileId, false);
+      setProfilePlayers(active);
+    } catch (error) {
+      console.error('Error loading players:', error);
+    }
+  };
+
+  const handleAddToRoster = async (player: PlayerRecord) => {
+    try {
+      await app.addToRoster.execute(peladaId, player.id, positionToSlotType(player.position));
+      await reloadRoster();
+    } catch (error) {
+      console.error('Error adding player to roster:', error);
+    }
+  };
+
+  const handleRemoveFromRoster = async (playerId: string) => {
+    try {
+      await app.removeFromRoster.execute(peladaId, playerId);
+      await reloadRoster();
+    } catch (error) {
+      console.error('Error removing player from roster:', error);
+    }
+  };
 
   const handleDrawTeams = async () => {
     setDrawingTeams(true);
@@ -68,6 +131,30 @@ export function PeladaScreen({ peladaId, onBack }: PeladaScreenProps): JSX.Eleme
     } finally {
       setDrawingTeams(false);
     }
+  };
+
+  const handleDeletePelada = async () => {
+    try {
+      await app.deletePelada.execute(peladaId);
+      setShowDeleteConfirm(false);
+      onDelete?.();
+      onBack?.();
+    } catch (error) {
+      console.error('Error deleting pelada:', error);
+    }
+  };
+
+  const handleClone = () => {
+    if (!pelada) return;
+    onClone?.({
+      time: pelada.time ?? '',
+      location: pelada.location ?? '',
+      team_names: draw.map(d => d.team.name).join('\n'),
+      players_per_team: pelada.players_per_team,
+      max_goalkeepers: pelada.max_goalkeepers,
+      cost_per_player: pelada.cost_per_player,
+      goalkeeper_pays: pelada.goalkeeper_pays,
+    });
   };
 
   const handleSetPlayerPaid = async (rosterEntryId: string, playerId: string, paid: boolean) => {
@@ -109,6 +196,41 @@ export function PeladaScreen({ peladaId, onBack }: PeladaScreenProps): JSX.Eleme
   const formatCurrency = (cents: number): string => {
     return `R$ ${(cents / 100).toFixed(2)}`;
   };
+
+  // Convocation message (spec 8.1): profile template with pelada placeholders.
+  const convocationMessage = profile?.convocation_template
+    ? buildConvocationMessage(profile.convocation_template, {
+        data: formatDate(pelada.date),
+        hora: pelada.time ?? '',
+        local: pelada.location ?? '',
+        custo: formatCurrency(pelada.cost_per_player),
+      })
+    : '';
+
+  // Slot type per player, as configured in the roster (defines 🧤 vs ⚽).
+  const slotByPlayerId = new Map(roster.map(e => [e.player_id, e.slot_type]));
+
+  // Drawn-teams message (spec 8.2): teams in draw order, players with 🧤/⚽.
+  // Goalkeepers left out of the draw are naturally absent from the assignments.
+  const drawnTeamsForMessage: TeamForMessage[] = draw.map(result => ({
+    name: result.team.name,
+    players: result.players.map(assignment => ({
+      name: displayName(players.get(assignment.player_id) ?? { name: assignment.player_id }),
+      slotType: slotByPlayerId.get(assignment.player_id) ?? 'line',
+    })),
+  }));
+  const drawnTeamsMessage = buildDrawnTeamsMessage(drawnTeamsForMessage);
+
+  // Payment checklist message (spec 8.3): alphabetical, ✅/❌.
+  // Goalkeepers appear only when the pelada charges them.
+  const paymentChecklistMessage = buildPaymentChecklistMessage(
+    roster
+      .filter(e => e.slot_type !== 'goalkeeper' || pelada.goalkeeper_pays)
+      .map(e => ({
+        name: displayName(players.get(e.player_id) ?? { name: e.player_id }),
+        paid: e.paid,
+      })),
+  );
 
   return (
     <div className="pelada-screen">
@@ -168,22 +290,38 @@ export function PeladaScreen({ peladaId, onBack }: PeladaScreenProps): JSX.Eleme
 
         {/* Roster Accordion */}
         <Accordion title={`Roster (${roster.length})`} icon="👥">
-          {roster.length === 0 ? (
-            <p className="accordion-empty">Nenhum jogador adicionado</p>
-          ) : (
-            <div className="accordion-content">
+          <div className="accordion-content">
+            {roster.length === 0 ? (
+              <p className="accordion-empty">Nenhum jogador adicionado</p>
+            ) : (
               <div className="roster-list">
                 {roster.map(entry => (
                   <div key={entry.id} className="roster-item">
                     <span className="roster-player">
-                      {players.get(entry.player_id)?.name || entry.player_id}
+                      {displayName(players.get(entry.player_id) ?? { name: entry.player_id })}
                       {entry.slot_type === 'goalkeeper' && ' 🧤'}
                     </span>
+                    <button
+                      className="roster-remove"
+                      onClick={() => handleRemoveFromRoster(entry.player_id)}
+                      aria-label={`Remover ${displayName(players.get(entry.player_id) ?? { name: entry.player_id })} do roster`}
+                      title="Remover"
+                    >
+                      ✕
+                    </button>
                   </div>
                 ))}
               </div>
-            </div>
-          )}
+            )}
+            <Button
+              variant="secondary"
+              fullWidth
+              onClick={openAddRoster}
+              style={{ marginTop: 'var(--space-3)' }}
+            >
+              + Adicionar jogador
+            </Button>
+          </div>
         </Accordion>
 
         {/* Draw Accordion */}
@@ -203,18 +341,42 @@ export function PeladaScreen({ peladaId, onBack }: PeladaScreenProps): JSX.Eleme
               </div>
             ) : (
               <div className="draw-teams">
-                {draw.map(result => (
-                  <div key={result.team.id} className="draw-team">
-                    <h4 className="draw-team-name">{result.team.name}</h4>
-                    <ul className="draw-team-players">
-                      {result.players.map(assignment => (
-                        <li key={assignment.id}>
-                          {players.get(assignment.player_id)?.name || assignment.player_id}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
+                {draw.map(result => {
+                  const teamPlayers = result.players
+                    .map(a => players.get(a.player_id))
+                    .filter((p): p is PlayerRecord => p !== undefined);
+                  const stats = computeTeamStats(teamPlayers);
+                  return (
+                    <div key={result.team.id} className="draw-team">
+                      <h4 className="draw-team-name">{result.team.name}</h4>
+                      <ul className="draw-team-players">
+                        {result.players.map(assignment => (
+                          <li key={assignment.id}>
+                            {displayName(players.get(assignment.player_id) ?? { name: assignment.player_id })}
+                          </li>
+                        ))}
+                      </ul>
+                      {/* Admin-only stats — never included in the message */}
+                      <div className="draw-team-stats">
+                        <div className="draw-stat-row">
+                          <span>⭐ Total: <strong>{stats.totalStars.toFixed(1)}</strong></span>
+                          <span>Média: <strong>{stats.averageStars.toFixed(2)}</strong></span>
+                        </div>
+                        <div className="draw-stat-row">
+                          <span>🛡️ {stats.positionCounts.defense}</span>
+                          <span>🎯 {stats.positionCounts.midfield}</span>
+                          <span>⚔️ {stats.positionCounts.attack}</span>
+                          <span>🧤 {stats.positionCounts.goalkeeper}</span>
+                        </div>
+                        <div className="draw-stat-row">
+                          <span>🐢 {stats.speedCounts.slow}</span>
+                          <span>🏃 {stats.speedCounts.medium}</span>
+                          <span>⚡ {stats.speedCounts.fast}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
                 <Button
                   variant="secondary"
                   fullWidth
@@ -230,35 +392,135 @@ export function PeladaScreen({ peladaId, onBack }: PeladaScreenProps): JSX.Eleme
         </Accordion>
 
         {/* Payments Accordion */}
-        <Accordion title="Pagamentos" icon="💰">
-          {roster.length === 0 ? (
-            <p className="accordion-empty">Nenhum jogador adicionado</p>
-          ) : (
-            <div className="accordion-content">
-              <div className="payment-table">
-                {roster.map(entry => (
-                  <div key={entry.id} className="payment-row">
-                    <span className="payment-name">
-                      {players.get(entry.player_id)?.name || entry.player_id}
-                    </span>
-                    <label className="payment-checkbox">
-                      <input
-                        type="checkbox"
-                        checked={entry.paid}
-                        onChange={e =>
-                          handleSetPlayerPaid(entry.id, entry.player_id, e.target.checked)
-                        }
-                        aria-label={`Marcar ${players.get(entry.player_id)?.name} como pago`}
-                      />
-                      <span className="payment-status">{entry.paid ? '✅' : '❌'}</span>
-                    </label>
+        {(() => {
+          const paymentRoster = roster.filter(
+            e => e.slot_type !== 'goalkeeper' || pelada.goalkeeper_pays,
+          );
+          return (
+            <Accordion title="Pagamentos" icon="💰">
+              {paymentRoster.length === 0 ? (
+                <p className="accordion-empty">Nenhum jogador adicionado</p>
+              ) : (
+                <div className="accordion-content">
+                  <div className="payment-table">
+                    {paymentRoster.map(entry => (
+                      <div key={entry.id} className="payment-row">
+                        <span className="payment-name">
+                          {displayName(players.get(entry.player_id) ?? { name: entry.player_id })}
+                        </span>
+                        <label className="payment-checkbox">
+                          <input
+                            type="checkbox"
+                            checked={entry.paid}
+                            onChange={e =>
+                              handleSetPlayerPaid(entry.id, entry.player_id, e.target.checked)
+                            }
+                            aria-label={`Marcar ${players.get(entry.player_id)?.name} como pago`}
+                          />
+                          <span className="payment-status">{entry.paid ? '✅' : '❌'}</span>
+                        </label>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
+                </div>
+              )}
+            </Accordion>
+          );
+        })()}
+
+        {/* Messages Accordion */}
+        <Accordion title="Mensagens" icon="💬">
+          <div className="accordion-content pelada-messages">
+            <MessageCard
+              title="Convocação"
+              message={convocationMessage}
+              emptyHint="Defina o template de convocação em Configurações"
+            />
+            <MessageCard
+              title="Times Sorteados"
+              message={drawnTeamsMessage}
+              emptyHint="Sorteie os times para gerar a mensagem"
+            />
+            <MessageCard
+              title="Checklist de Pagamentos"
+              message={paymentChecklistMessage}
+              emptyHint="Adicione jogadores para gerar a mensagem"
+            />
+          </div>
+        </Accordion>
+        {/* Actions Accordion */}
+        <Accordion title="Ações" icon="⚙️">
+          <div className="accordion-content pelada-actions">
+            {onClone && (
+              <Button
+                variant="secondary"
+                fullWidth
+                onClick={handleClone}
+              >
+                📋 Clonar pelada
+              </Button>
+            )}
+            <Button
+              variant="destructive"
+              fullWidth
+              onClick={() => setShowDeleteConfirm(true)}
+            >
+              🗑️ Apagar pelada
+            </Button>
+          </div>
         </Accordion>
       </main>
+
+      {/* Delete confirmation sheet */}
+      <BottomSheet
+        open={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        title="Apagar pelada?"
+      >
+        <div className="pelada-delete-confirm">
+          <p>Tem certeza? Esta ação remove a pelada e todos os seus dados (jogadores, times e pagamentos).</p>
+          <div className="pelada-delete-buttons">
+            <Button variant="ghost" fullWidth onClick={() => setShowDeleteConfirm(false)}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" fullWidth onClick={handleDeletePelada}>
+              Apagar
+            </Button>
+          </div>
+        </div>
+      </BottomSheet>
+
+      {/* Add-to-roster sheet */}
+      <BottomSheet
+        open={showAddRoster}
+        onClose={() => setShowAddRoster(false)}
+        title="Adicionar ao roster"
+      >
+        {(() => {
+          const rosterIds = new Set(roster.map(e => e.player_id));
+          const available = profilePlayers.filter(p => !rosterIds.has(p.id));
+          if (available.length === 0) {
+            return <p className="accordion-empty">Nenhum jogador disponível</p>;
+          }
+          return (
+            <div className="roster-picker">
+              {available.map(player => (
+                <button
+                  key={player.id}
+                  className="roster-picker-item"
+                  onClick={() => handleAddToRoster(player)}
+                >
+                  <span>
+                    {displayName(player)}
+                    {player.position === 'goalkeeper' && ' 🧤'}
+                  </span>
+                  <span className="roster-picker-add">+</span>
+                </button>
+              ))}
+            </div>
+          );
+        })()}
+      </BottomSheet>
     </div>
   );
 }

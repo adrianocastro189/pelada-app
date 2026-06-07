@@ -10,9 +10,8 @@ describe('UpdatePlayerUseCase', () => {
     const created = await repo.create('profile-1', {
       name: 'João',
       stars: 2,
-      position: 'line',
+      position: 'midfield',
       speed: 'medium',
-      default_type: 'line',
     });
 
     const result = await useCase.execute(created.id, { stars: 4.5 });
@@ -27,9 +26,8 @@ describe('UpdatePlayerUseCase', () => {
     const created = await repo.create('profile-1', {
       name: 'João',
       stars: 2,
-      position: 'line',
+      position: 'midfield',
       speed: 'medium',
-      default_type: 'line',
     });
 
     const result = await useCase.execute(created.id, { name: 'João Updated' });
@@ -44,9 +42,8 @@ describe('UpdatePlayerUseCase', () => {
     const created = await repo.create('profile-1', {
       name: 'João',
       stars: 2,
-      position: 'line',
+      position: 'midfield',
       speed: 'medium',
-      default_type: 'line',
     });
 
     await expect(useCase.execute(created.id, { stars: 5.5 })).rejects.toThrow(

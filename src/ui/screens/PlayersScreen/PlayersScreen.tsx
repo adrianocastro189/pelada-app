@@ -1,12 +1,34 @@
 import { useEffect, useState } from 'react';
 import { Button, Card, Input, BottomSheet, Badge } from '@ui/components';
 import { useApp } from '@ui/AppContext';
-import type { PlayerRecord } from '@ports/repositories/PlayerRepository';
+import type { PlayerRecord, PlayerPosition } from '@ports/repositories/PlayerRepository';
 import './PlayersScreen.css';
+
+/** Returns "Name - Nickname" when a nickname exists, otherwise just "Name". */
+function displayName(player: { name: string; nickname?: string | null }): string {
+  return player.nickname ? `${player.name} - ${player.nickname}` : player.name;
+}
 
 interface PlayersScreenProps {
   profileId: string;
 }
+
+const emptyForm = {
+  name: '',
+  nickname: '',
+  phone: '',
+  stars: 3,
+  position: 'midfield' as PlayerPosition,
+  speed: 'medium' as 'slow' | 'medium' | 'fast',
+};
+
+/** Portuguese label + emoji for each position. */
+const POSITION_META: Record<PlayerPosition, { emoji: string; name: string }> = {
+  goalkeeper: { emoji: '🧤', name: 'Goleiro' },
+  defense: { emoji: '🛡️', name: 'Defesa' },
+  midfield: { emoji: '🎯', name: 'Meio' },
+  attack: { emoji: '⚔️', name: 'Ataque' },
+};
 
 /**
  * Screen for managing players in a profile.
@@ -17,16 +39,16 @@ export function PlayersScreen({ profileId }: PlayersScreenProps): JSX.Element {
   const [players, setPlayers] = useState<PlayerRecord[]>([]);
   const [showInactive, setShowInactive] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [showCreateSheet, setShowCreateSheet] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    nickname: '',
-    phone: '',
-    stars: 3,
-    position: 'line' as 'goalkeeper' | 'line',
-    speed: 'medium' as 'slow' | 'medium' | 'fast',
-    default_type: 'line' as 'goalkeeper' | 'line',
-  });
+  const [showSheet, setShowSheet] = useState(false);
+  // The player currently being edited, or null when creating a new one.
+  const [editing, setEditing] = useState<PlayerRecord | null>(null);
+  const [confirmInactivate, setConfirmInactivate] = useState(false);
+  const [formData, setFormData] = useState(emptyForm);
+
+  const reloadPlayers = async () => {
+    const result = await app.listPlayers.execute(profileId, showInactive);
+    setPlayers(result);
+  };
 
   // Load players on mount and when showInactive changes
   useEffect(() => {
@@ -42,53 +64,74 @@ export function PlayersScreen({ profileId }: PlayersScreenProps): JSX.Element {
     loadPlayers();
   }, [profileId, showInactive, app.listPlayers]);
 
-  const handleCreatePlayer = async () => {
+  const closeSheet = () => {
+    setShowSheet(false);
+    setEditing(null);
+    setConfirmInactivate(false);
+    setFormData(emptyForm);
+  };
+
+  const openCreateSheet = () => {
+    setEditing(null);
+    setConfirmInactivate(false);
+    setFormData(emptyForm);
+    setShowSheet(true);
+  };
+
+  const openEditSheet = (player: PlayerRecord) => {
+    setEditing(player);
+    setConfirmInactivate(false);
+    setFormData({
+      name: player.name,
+      nickname: player.nickname ?? '',
+      phone: player.phone ?? '',
+      stars: player.stars,
+      position: player.position,
+      speed: player.speed,
+    });
+    setShowSheet(true);
+  };
+
+  const handleSubmit = async () => {
     if (!formData.name.trim()) return;
+    const payload = {
+      name: formData.name.trim(),
+      nickname: formData.nickname || null,
+      phone: formData.phone || null,
+      stars: formData.stars,
+      position: formData.position,
+      speed: formData.speed,
+    };
     try {
-      await app.createPlayer.execute(profileId, {
-        name: formData.name.trim(),
-        nickname: formData.nickname || null,
-        phone: formData.phone || null,
-        stars: formData.stars,
-        position: formData.position,
-        speed: formData.speed,
-        default_type: formData.default_type,
-      });
-      // Reset form and reload
-      setFormData({
-        name: '',
-        nickname: '',
-        phone: '',
-        stars: 3,
-        position: 'line',
-        speed: 'medium',
-        default_type: 'line',
-      });
-      setShowCreateSheet(false);
-      const result = await app.listPlayers.execute(profileId, showInactive);
-      setPlayers(result);
+      if (editing) {
+        await app.updatePlayer.execute(editing.id, payload);
+      } else {
+        await app.createPlayer.execute(profileId, payload);
+      }
+      closeSheet();
+      await reloadPlayers();
     } catch (error) {
-      console.error('Error creating player:', error);
+      console.error('Error saving player:', error);
     }
   };
 
-  const handleToggleStatus = async (playerId: string, currentStatus: 'active' | 'inactive') => {
+  const handleToggleStatus = async (player: PlayerRecord) => {
     try {
-      if (currentStatus === 'active') {
-        await app.deactivatePlayer.execute(playerId);
+      if (player.status === 'active') {
+        await app.deactivatePlayer.execute(player.id);
       } else {
-        await app.reactivatePlayer.execute(playerId);
+        await app.reactivatePlayer.execute(player.id);
       }
-      // Reload players
-      const result = await app.listPlayers.execute(profileId, showInactive);
-      setPlayers(result);
+      closeSheet();
+      await reloadPlayers();
     } catch (error) {
       console.error('Error toggling player status:', error);
     }
   };
 
-  const getPositionLabel = (position: string): string => {
-    return position === 'goalkeeper' ? '🧤' : '⚽';
+  const getPositionLabel = (position: PlayerPosition): string => {
+    const meta = POSITION_META[position];
+    return `${meta.emoji} ${meta.name}`;
   };
 
   const getSpeedLabel = (speed: string): string => {
@@ -146,24 +189,26 @@ export function PlayersScreen({ profileId }: PlayersScreenProps): JSX.Element {
               <Card key={player.id} className="player-card">
                 <div className="player-card-header">
                   <div className="player-card-name">
-                    <h3>{player.name}</h3>
-                    {player.nickname && <p className="player-nickname">{player.nickname}</p>}
+                    <h3>{displayName(player)}</h3>
                   </div>
-                  <div className="player-card-status">
+                  <div className="player-card-actions">
+                    {player.status === 'inactive' && (
+                      <Badge label="Inativo" variant="default" />
+                    )}
                     <button
-                      className={`status-toggle ${player.status}`}
-                      onClick={() => handleToggleStatus(player.id, player.status)}
-                      aria-label={`Toggle ${player.name} status`}
-                      title={player.status === 'active' ? 'Inativar' : 'Reativar'}
+                      className="player-edit-button"
+                      onClick={() => openEditSheet(player)}
+                      aria-label={`Editar ${displayName(player)}`}
+                      title="Editar"
                     >
-                      {player.status === 'active' ? '✅' : '⭕'}
+                      ✏️
                     </button>
                   </div>
                 </div>
 
                 <div className="player-card-stats">
                   <span className="stat">
-                    {getPositionLabel(player.position)} {player.position}
+                    {getPositionLabel(player.position)}
                   </span>
                   <span className="stat">
                     {getSpeedLabel(player.speed)} {player.speed}
@@ -180,35 +225,24 @@ export function PlayersScreen({ profileId }: PlayersScreenProps): JSX.Element {
         <Button
           variant="secondary"
           fullWidth
-          onClick={() => setShowCreateSheet(true)}
+          onClick={openCreateSheet}
           className="players-create-button"
         >
           + Adicionar jogador
         </Button>
       </main>
 
-      {/* Create sheet */}
+      {/* Create / edit sheet */}
       <BottomSheet
-        open={showCreateSheet}
-        onClose={() => {
-          setShowCreateSheet(false);
-          setFormData({
-            name: '',
-            nickname: '',
-            phone: '',
-            stars: 3,
-            position: 'line',
-            speed: 'medium',
-            default_type: 'line',
-          });
-        }}
-        title="Novo jogador"
+        open={showSheet}
+        onClose={closeSheet}
+        title={editing ? 'Editar jogador' : 'Novo jogador'}
       >
         <form
           className="players-create-form"
           onSubmit={e => {
             e.preventDefault();
-            handleCreatePlayer();
+            handleSubmit();
           }}
         >
           <Input
@@ -236,11 +270,13 @@ export function PlayersScreen({ profileId }: PlayersScreenProps): JSX.Element {
               <label className="form-label">Posição</label>
               <select
                 value={formData.position}
-                onChange={e => setFormData({ ...formData, position: e.target.value as 'goalkeeper' | 'line' })}
+                onChange={e => setFormData({ ...formData, position: e.target.value as PlayerPosition })}
                 className="form-select"
               >
-                <option value="line">⚽ Linha</option>
                 <option value="goalkeeper">🧤 Goleiro</option>
+                <option value="defense">🛡️ Defesa</option>
+                <option value="midfield">🎯 Meio</option>
+                <option value="attack">⚔️ Ataque</option>
               </select>
             </div>
             <div>
@@ -270,22 +306,60 @@ export function PlayersScreen({ profileId }: PlayersScreenProps): JSX.Element {
                 className="form-number"
               />
             </div>
-            <div>
-              <label className="form-label">Tipo padrão</label>
-              <select
-                value={formData.default_type}
-                onChange={e => setFormData({ ...formData, default_type: e.target.value as 'goalkeeper' | 'line' })}
-                className="form-select"
-              >
-                <option value="line">⚽ Linha</option>
-                <option value="goalkeeper">🧤 Goleiro</option>
-              </select>
-            </div>
           </div>
 
-          <Button variant="primary" fullWidth type="submit">
-            Adicionar
-          </Button>
+          {!confirmInactivate && (
+            <>
+              <Button variant="primary" fullWidth type="submit">
+                {editing ? 'Salvar' : 'Adicionar'}
+              </Button>
+
+              {editing && editing.status === 'active' && (
+                <Button
+                  variant="destructive"
+                  fullWidth
+                  type="button"
+                  onClick={() => setConfirmInactivate(true)}
+                >
+                  Inativar jogador
+                </Button>
+              )}
+              {editing && editing.status === 'inactive' && (
+                <Button
+                  variant="secondary"
+                  fullWidth
+                  type="button"
+                  onClick={() => handleToggleStatus(editing)}
+                >
+                  Reativar jogador
+                </Button>
+              )}
+            </>
+          )}
+
+          {editing && confirmInactivate && (
+            <div className="players-inactivate-confirm">
+              <p>Inativar <strong>{displayName(editing)}</strong>? O histórico é preservado e você pode reativá-lo depois.</p>
+              <div className="players-inactivate-buttons">
+                <Button
+                  variant="ghost"
+                  fullWidth
+                  type="button"
+                  onClick={() => setConfirmInactivate(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  variant="destructive"
+                  fullWidth
+                  type="button"
+                  onClick={() => handleToggleStatus(editing)}
+                >
+                  Confirmar
+                </Button>
+              </div>
+            </div>
+          )}
         </form>
       </BottomSheet>
     </div>

@@ -109,15 +109,15 @@ export function createCompositionRoot(connectionString: string): AppContextValue
   const updatePlayer = new UpdatePlayerUseCase(playerRepo)
 
   // Pelada
-  const clonePelada = new ClonePeladaUseCase(peladaRepo)
-  const createPelada = new CreatePeladaUseCase(peladaRepo)
+  const clonePelada = new ClonePeladaUseCase(peladaRepo, peladaTeamRepo)
+  const createPelada = new CreatePeladaUseCase(peladaRepo, peladaTeamRepo)
   const deletePelada = new DeletePeladaUseCase(peladaRepo)
   const getPelada = new GetPeladaUseCase(peladaRepo)
   const listPeladas = new ListPeladasUseCase(peladaRepo)
   const updatePelada = new UpdatePeladaUseCase(peladaRepo)
 
   // Roster
-  const addToRoster = new AddToRosterUseCase(peladaRepo, peladaPlayerRepo)
+  const addToRoster = new AddToRosterUseCase(peladaRepo, peladaPlayerRepo, peladaTeamRepo)
   const getRoster = new GetRosterUseCase(peladaPlayerRepo)
   const removeFromRoster = new RemoveFromRosterUseCase(peladaPlayerRepo)
   const setPlayerPaid = new SetPlayerPaidUseCase(peladaPlayerRepo)

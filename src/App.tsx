@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useApp } from '@ui/AppContext';
 import { ProfilesScreen } from '@ui/screens/ProfilesScreen';
 import { PeladasScreen } from '@ui/screens/PeladasScreen';
+import type { ClonePeladaFormData } from '@ui/screens/PeladasScreen';
 import { PeladaScreen } from '@ui/screens/PeladaScreen';
 import { PlayersScreen } from '@ui/screens/PlayersScreen';
 import { FinancialScreen } from '@ui/screens/FinancialScreen';
@@ -11,7 +12,7 @@ import './App.css';
 
 type Screen =
   | { name: 'profiles' }
-  | { name: 'peladas'; profileId: string }
+  | { name: 'peladas'; profileId: string; cloneData?: ClonePeladaFormData }
   | { name: 'pelada'; profileId: string; peladaId: string }
   | { name: 'players'; profileId: string }
   | { name: 'financial'; profileId: string }
@@ -56,6 +57,7 @@ export default function App(): JSX.Element {
       {screen.name === 'peladas' && (
         <PeladasScreen
           profileId={screen.profileId}
+          cloneData={screen.cloneData}
           onSelectPelada={peladaId =>
             setScreen({
               name: 'pelada',
@@ -71,6 +73,10 @@ export default function App(): JSX.Element {
           profileId={screen.profileId}
           peladaId={screen.peladaId}
           onBack={() => setScreen({ name: 'peladas', profileId: screen.profileId })}
+          onClone={data =>
+            setScreen({ name: 'peladas', profileId: screen.profileId, cloneData: data })
+          }
+          onDelete={() => setScreen({ name: 'peladas', profileId: screen.profileId })}
         />
       )}
 

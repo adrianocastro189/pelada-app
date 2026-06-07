@@ -10,9 +10,8 @@ describe('ListPlayersUseCase', () => {
     const active = await repo.create('profile-1', {
       name: 'Active Player',
       stars: 3,
-      position: 'line',
+      position: 'midfield',
       speed: 'medium',
-      default_type: 'line',
     });
 
     const inactive = await repo.create('profile-1', {
@@ -20,7 +19,6 @@ describe('ListPlayersUseCase', () => {
       stars: 2,
       position: 'goalkeeper',
       speed: 'slow',
-      default_type: 'goalkeeper',
     });
 
     await repo.inactivate(inactive.id);
@@ -38,9 +36,8 @@ describe('ListPlayersUseCase', () => {
     const active = await repo.create('profile-1', {
       name: 'Active Player',
       stars: 3,
-      position: 'line',
+      position: 'midfield',
       speed: 'medium',
-      default_type: 'line',
     });
 
     const inactive = await repo.create('profile-1', {
@@ -48,7 +45,6 @@ describe('ListPlayersUseCase', () => {
       stars: 2,
       position: 'goalkeeper',
       speed: 'slow',
-      default_type: 'goalkeeper',
     });
 
     await repo.inactivate(inactive.id);

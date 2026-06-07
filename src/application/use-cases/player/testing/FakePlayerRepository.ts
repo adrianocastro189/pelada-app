@@ -23,7 +23,6 @@ export class FakePlayerRepository implements PlayerRepository {
       stars: player.stars,
       position: player.position,
       speed: player.speed,
-      default_type: player.default_type,
       invited_by_id: player.invited_by_id ?? null,
       status: 'active',
       created_at: now,
@@ -86,7 +85,6 @@ export class FakePlayerRepository implements PlayerRepository {
       stars: data.stars ?? player.stars,
       position: data.position ?? player.position,
       speed: data.speed ?? player.speed,
-      default_type: data.default_type ?? player.default_type,
       invited_by_id: data.invited_by_id ?? player.invited_by_id,
     };
     this.players.set(id, updated);

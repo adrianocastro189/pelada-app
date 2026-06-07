@@ -21,9 +21,8 @@ const mockPlayers: PlayerRecord[] = [
     nickname: 'Joãozinho',
     phone: '11999999999',
     stars: 3.5,
-    position: 'line',
+    position: 'midfield',
     speed: 'fast',
-    default_type: 'line',
     status: 'active',
     invited_by_id: null,
     created_at: new Date(),
@@ -37,7 +36,6 @@ const mockPlayers: PlayerRecord[] = [
     stars: 4,
     position: 'goalkeeper',
     speed: 'medium',
-    default_type: 'goalkeeper',
     status: 'active',
     invited_by_id: null,
     created_at: new Date(),
@@ -49,9 +47,8 @@ const mockPlayers: PlayerRecord[] = [
     nickname: null,
     phone: '11988888888',
     stars: 2.5,
-    position: 'line',
+    position: 'midfield',
     speed: 'slow',
-    default_type: 'line',
     status: 'inactive',
     invited_by_id: null,
     created_at: new Date(),
@@ -105,20 +102,29 @@ describe('PlayersScreen', () => {
     });
   });
 
-  it('displays player names and nicknames', async () => {
+  it('displays players as "Name - Nickname" when nickname exists', async () => {
     render(<PlayersScreen profileId="prof-1" />);
     await waitFor(() => {
-      expect(screen.getByText('João Silva')).toBeInTheDocument();
-      expect(screen.getByText('Joãozinho')).toBeInTheDocument();
-      expect(screen.getByText('Maria Santos')).toBeInTheDocument();
+      // João has nickname → combined format
+      expect(screen.getByText('João Silva - Joãozinho')).toBeInTheDocument();
+      // Maria's nickname equals surname portion — still combined
+      expect(screen.getByText('Maria Santos - Maria')).toBeInTheDocument();
+    });
+  });
+
+  it('displays player without nickname using name only', async () => {
+    mockListPlayers.mockResolvedValueOnce([mockPlayers[2]]); // Pedro — no nickname
+    render(<PlayersScreen profileId="prof-1" />);
+    await waitFor(() => {
+      expect(screen.getByText('Pedro Costa')).toBeInTheDocument();
     });
   });
 
   it('displays player stats (position, speed, stars)', async () => {
     render(<PlayersScreen profileId="prof-1" />);
     await waitFor(() => {
-      expect(screen.getByText(/⚽ line/)).toBeInTheDocument();
-      expect(screen.getByText(/🧤 goalkeeper/)).toBeInTheDocument();
+      expect(screen.getByText(/🎯 Meio/)).toBeInTheDocument();
+      expect(screen.getByText(/🧤 Goleiro/)).toBeInTheDocument();
       expect(screen.getByText(/⚡ fast/)).toBeInTheDocument();
       expect(screen.getByText(/3.5/)).toBeInTheDocument();
     });
@@ -163,13 +169,53 @@ describe('PlayersScreen', () => {
     });
   });
 
-  it('toggles player status when button clicked', async () => {
-    mockListPlayers.mockResolvedValueOnce([mockPlayers[0]]);
+  it('opens edit sheet pre-filled when edit button clicked', async () => {
     render(<PlayersScreen profileId="prof-1" />);
-    const statusButtons = await screen.findAllByRole('button', { name: /Toggle.*status/ });
-    await userEvent.click(statusButtons[0]);
+    const editButton = await screen.findByRole('button', { name: 'Editar João Silva - Joãozinho' });
+    await userEvent.click(editButton);
     await waitFor(() => {
-      expect(mockDeactivatePlayer).toHaveBeenCalledWith(mockPlayers[0].id);
+      expect(screen.getByText('Editar jogador')).toBeInTheDocument();
+    });
+    expect(screen.getByDisplayValue('João Silva')).toBeInTheDocument();
+  });
+
+  it('updates player on edit form submit', async () => {
+    const mockUpdatePlayer = vi.fn().mockResolvedValue(mockPlayers[0]);
+    (AppContextModule.useApp as ReturnType<typeof vi.fn>).mockReturnValue({
+      listPlayers: { execute: mockListPlayers },
+      createPlayer: { execute: mockCreatePlayer },
+      updatePlayer: { execute: mockUpdatePlayer },
+      deactivatePlayer: { execute: mockDeactivatePlayer },
+      reactivatePlayer: { execute: mockReactivatePlayer },
+    });
+    render(<PlayersScreen profileId="prof-1" />);
+    const editButton = await screen.findByRole('button', { name: 'Editar João Silva - Joãozinho' });
+    await userEvent.click(editButton);
+
+    const submitButton = screen.getByRole('button', { name: 'Salvar' });
+    await userEvent.click(submitButton);
+
+    await waitFor(() => {
+      expect(mockUpdatePlayer).toHaveBeenCalledWith('pl1', expect.objectContaining({ name: 'João Silva' }));
+    });
+  });
+
+  it('inactivates player from inside the edit sheet after confirmation', async () => {
+    render(<PlayersScreen profileId="prof-1" />);
+    const editButton = await screen.findByRole('button', { name: 'Editar João Silva - Joãozinho' });
+    await userEvent.click(editButton);
+
+    const inactivateButton = await screen.findByRole('button', { name: 'Inativar jogador' });
+    await userEvent.click(inactivateButton);
+
+    // First click only reveals the confirmation step — no call yet.
+    expect(mockDeactivatePlayer).not.toHaveBeenCalled();
+
+    const confirmButton = await screen.findByRole('button', { name: 'Confirmar' });
+    await userEvent.click(confirmButton);
+
+    await waitFor(() => {
+      expect(mockDeactivatePlayer).toHaveBeenCalledWith('pl1');
     });
   });
 });
