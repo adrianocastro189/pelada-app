@@ -44,12 +44,10 @@ const mockPeladas: PeladaRecord[] = [
 describe('PeladasScreen', () => {
   let mockListPeladas: ReturnType<typeof vi.fn>;
   let mockCreatePelada: ReturnType<typeof vi.fn>;
-  let mockDeletePelada: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     mockListPeladas = vi.fn().mockResolvedValue(mockPeladas);
     mockCreatePelada = vi.fn().mockResolvedValue({ ...mockPeladas[0], id: '3' });
-    mockDeletePelada = vi.fn().mockResolvedValue(undefined);
 
     (AppContextModule.useApp as ReturnType<typeof vi.fn>).mockReturnValue({
       listPeladas: { execute: mockListPeladas },

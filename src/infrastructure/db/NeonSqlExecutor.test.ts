@@ -2,15 +2,23 @@ import { NeonSqlExecutor } from './NeonSqlExecutor'
 
 // Hoist the mock before any imports that might pull in @neondatabase/serverless.
 vi.mock('@neondatabase/serverless', () => {
-  const mockFn = vi.fn(async () => [{ id: '00000000-0000-0000-0000-000000000001', name: 'Test' }])
-  return { neon: vi.fn(() => mockFn) }
+  const mockRows = [{ id: '00000000-0000-0000-0000-000000000001', name: 'Test' }]
+  // NeonSqlExecutor calls this.execute.query(sql, params), so the returned object
+  // must be a function that also has a .query() method (mirrors the real NeonQueryFunction).
+  const mockQueryMethod = vi.fn().mockResolvedValue(mockRows)
+  const mockExecute = Object.assign(vi.fn().mockResolvedValue(mockRows), {
+    query: mockQueryMethod,
+  })
+  return { neon: vi.fn(() => mockExecute) }
 })
 
 describe('NeonSqlExecutor', () => {
-  it('calls neon() with the provided connection string', async () => {
+  it('calls neon() with the provided connection string and browser-warning suppressed', async () => {
     const { neon } = await import('@neondatabase/serverless')
     new NeonSqlExecutor('postgresql://user:pass@host/db')
-    expect(neon).toHaveBeenCalledWith('postgresql://user:pass@host/db')
+    expect(neon).toHaveBeenCalledWith('postgresql://user:pass@host/db', {
+      disableWarningInBrowsers: true,
+    })
   })
 
   it('returns rows from a query', async () => {

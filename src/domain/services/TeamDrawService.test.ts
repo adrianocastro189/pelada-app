@@ -88,7 +88,7 @@ describe('TeamDrawService', () => {
       makePos('a2', 3.0, 'attack'),
     ]
     const result = service.draw(players, { teamCount: 2 }, new SeededRandomSource(3), strategy)
-    const posOf = (id: string) => players.find(p => p.id === id)!.position
+    const posOf = (id: string) => players.find(p => p.id === id)?.position
     result.forEach(team => {
       const defenders = team.playerIds.filter(id => posOf(id) === 'defense').length
       const attackers = team.playerIds.filter(id => posOf(id) === 'attack').length
