@@ -12,21 +12,6 @@ jobs:
   ci:
     runs-on: ubuntu-latest
 
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_DB: pelada_test
-          POSTGRES_USER: pelada
-          POSTGRES_PASSWORD: pelada_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 5
-
     steps:
       - uses: actions/checkout@v4
 
@@ -35,13 +20,12 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Debug files
+      - name: Start PostgreSQL (pre-installed on ubuntu-latest)
         run: |
-          pwd
-          ls -la
-          echo "package-lock.json:"
-          ls -l package-lock.json || true
-          head -20 package-lock.json || true
+          sudo systemctl start postgresql
+          sudo -u postgres psql -c "CREATE USER pelada WITH PASSWORD 'pelada_test';"
+          sudo -u postgres psql -c "CREATE DATABASE pelada_test OWNER pelada;"
+          sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE pelada_test TO pelada;"
 
       - run: npm ci
 
